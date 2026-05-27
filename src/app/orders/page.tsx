@@ -63,7 +63,7 @@ export default function OrdersPage() {
       `📋 Layanan: ${svcNames}\n` +
       `📅 Tanggal: ${dateStr}\n` +
       `⏰ Waktu: ${booking.time.slice(0, 5)}\n\n` +
-      `Lokasi: 📍Loome Hair Removal\n\n` +
+      `Lokasi:\n📍Loome Hair Removal\nhttps://maps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
       `Mohon dibantu konfirmasi dengan memilih salah satu jawaban: Hadir, Batal, Reschedule.\n` +
       `Terimakasih banyak kak! 💚`
     )
