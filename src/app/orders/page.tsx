@@ -121,16 +121,20 @@ export default function OrdersPage() {
     return result
   }
 
-  // For "all" tab: split into upcoming confirmed and everything else
+  // For "all" tab: three sections
   const upcomingBookings = allBookings
     .filter(b => b.status === 'confirmed' && b.date >= todayStr)
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-  const pastBookings = allBookings
-    .filter(b => !(b.status === 'confirmed' && b.date >= todayStr))
+  const unprocessedBookings = allBookings
+    .filter(b => b.status === 'confirmed' && b.date < todayStr)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
+  const historyBookings = allBookings
+    .filter(b => b.status !== 'confirmed')
     .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
 
   const upcomingGrouped = groupByDate(upcomingBookings)
-  const pastGrouped = groupByDate(pastBookings)
+  const unprocessedGrouped = groupByDate(unprocessedBookings)
+  const historyGrouped = groupByDate(historyBookings)
   const grouped = groupByDate(filtered)
 
   function formatDateLabel(dateStr: string) {
@@ -418,8 +422,61 @@ export default function OrdersPage() {
               </div>
             ))}
 
-            {/* Past section — only in Semua tab */}
-            {tab === 'all' && pastGrouped.length > 0 && (
+            {/* Belum Diproses — past confirmed bookings needing action */}
+            {tab === 'all' && unprocessedGrouped.length > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-bold text-orange-500 uppercase tracking-wide">Belum Diproses</span>
+                  <div className="flex-1 h-px bg-orange-100" />
+                  <span className="text-xs text-orange-400">{unprocessedBookings.length} janji</span>
+                </div>
+                {unprocessedGrouped.map(({ dateStr, bookings: dayBookings }) => (
+                  <div key={dateStr} className="mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-semibold text-orange-400">{formatDateLabel(dateStr)}</span>
+                      <div className="flex-1 h-px bg-orange-100" />
+                    </div>
+                    <div className="space-y-2">
+                      {dayBookings.map(booking => {
+                        const svcList = booking.services?.length ? booking.services : booking.service ? [booking.service] : []
+                        const total = booking.custom_price ?? (svcList.length ? svcList.reduce((s, x) => s + x.price, 0) : null)
+                        return (
+                          <div
+                            key={booking.id}
+                            onClick={() => router.push(`/bookings/${booking.id}`)}
+                            className="flex items-center gap-3 p-3.5 rounded-2xl border border-orange-200 bg-orange-50 active:bg-orange-100 cursor-pointer"
+                          >
+                            <div className="w-12 flex-shrink-0 text-center">
+                              <span className="text-sm font-bold text-orange-500">{booking.time.slice(0, 5)}</span>
+                            </div>
+                            <div className="w-px h-10 bg-orange-200 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-900 truncate">{booking.customer?.name}</p>
+                              <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                {svcList.length ? svcList.map(s => s.name).join(', ') : 'Layanan dihapus'}
+                              </p>
+                              {total && <p className="text-xs font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(total)}</p>}
+                            </div>
+                            <button
+                              onClick={e => { e.stopPropagation(); markCompleted(booking.id) }}
+                              className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 border border-green-300 flex items-center justify-center active:bg-green-200"
+                              title="Tandai selesai"
+                            >
+                              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Riwayat — completed & cancelled only */}
+            {tab === 'all' && historyGrouped.length > 0 && (
               <>
                 <button
                   type="button"
@@ -428,7 +485,7 @@ export default function OrdersPage() {
                 >
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Riwayat</span>
                   <div className="flex-1 h-px bg-gray-100" />
-                  <span className="text-xs text-gray-400">{pastBookings.length} janji</span>
+                  <span className="text-xs text-gray-400">{historyBookings.length} janji</span>
                   <svg
                     className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform"
                     style={{ transform: riwayatExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
@@ -437,7 +494,7 @@ export default function OrdersPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                {riwayatExpanded && pastGrouped.map(({ dateStr, bookings: dayBookings }) => (
+                {riwayatExpanded && historyGrouped.map(({ dateStr, bookings: dayBookings }) => (
                   <div key={dateStr} className="mb-4">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs font-semibold text-gray-400">{formatDateLabel(dateStr)}</span>
