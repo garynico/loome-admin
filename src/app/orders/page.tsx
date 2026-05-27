@@ -32,6 +32,7 @@ export default function OrdersPage() {
   const [allPurchases, setAllPurchases] = useState<CustomerPackage[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('all')
+  const [riwayatExpanded, setRiwayatExpanded] = useState(false)
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -278,11 +279,10 @@ export default function OrdersPage() {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs font-bold text-[#2D5A3D] uppercase tracking-wide">Pembelian Paket</span>
-                  <span className="text-xs text-gray-400">
-                    Total {formatPrice(allPurchases.reduce((s, p) => s + p.paid_price, 0))}
-                  </span>
+                  <div className="flex-1 h-px bg-[#E8F0EA]" />
+                  <span className="text-xs text-gray-400">{allPurchases.length} paket</span>
                 </div>
                 <div className="space-y-2">
                   {allPurchases
@@ -421,12 +421,23 @@ export default function OrdersPage() {
             {/* Past section — only in Semua tab */}
             {tab === 'all' && pastGrouped.length > 0 && (
               <>
-                <div className="flex items-center gap-2 mt-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setRiwayatExpanded(v => !v)}
+                  className="flex items-center gap-2 w-full mt-2 mb-3"
+                >
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Riwayat</span>
                   <div className="flex-1 h-px bg-gray-100" />
                   <span className="text-xs text-gray-400">{pastBookings.length} janji</span>
-                </div>
-                {pastGrouped.map(({ dateStr, bookings: dayBookings }) => (
+                  <svg
+                    className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform"
+                    style={{ transform: riwayatExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {riwayatExpanded && pastGrouped.map(({ dateStr, bookings: dayBookings }) => (
                   <div key={dateStr} className="mb-4">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs font-semibold text-gray-400">{formatDateLabel(dateStr)}</span>
@@ -474,6 +485,7 @@ export default function OrdersPage() {
                 ))}
               </>
             )}
+
           </div>
         )}
       </div>

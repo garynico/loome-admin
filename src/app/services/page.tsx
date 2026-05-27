@@ -106,37 +106,48 @@ function ServicesContent() {
               </button>
             </div>
           ) : (
-            <div className="px-4 py-4 space-y-3">
-              {services.map(s => (
-                <div key={s.id} className="flex items-center gap-3 p-4 rounded-2xl border border-gray-100">
-                  <div className="w-10 h-10 rounded-xl bg-[#E8F0EA] flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#2D5A3D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-semibold text-gray-900">{s.name}</p>
-                      {s.gender_target !== 'all' && (
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: s.gender_target === 'female' ? '#fce7f3' : '#eff6ff', color: s.gender_target === 'female' ? '#be185d' : '#1d4ed8' }}>
-                          {s.gender_target === 'female' ? '♀' : '♂'}
-                        </span>
-                      )}
+            <div className="px-4 py-4">
+              {(['female', 'male', 'all'] as const).map(gender => {
+                const group = services.filter(s => s.gender_target === gender)
+                if (group.length === 0) return null
+                const label = gender === 'female' ? '♀ Wanita' : gender === 'male' ? '♂ Pria' : '✦ Semua Gender'
+                const labelColor = gender === 'female' ? '#be185d' : gender === 'male' ? '#1d4ed8' : '#6b7280'
+                const lineColor = gender === 'female' ? '#fce7f3' : gender === 'male' ? '#eff6ff' : '#f3f4f6'
+                return (
+                  <div key={gender} className="mb-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xs font-bold uppercase tracking-wide" style={{ color: labelColor }}>{label}</span>
+                      <div className="flex-1 h-px" style={{ background: lineColor }} />
+                      <span className="text-xs text-gray-400">{group.length} layanan</span>
                     </div>
-                    <p className="text-sm font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(s.price)}</p>
+                    <div className="space-y-3">
+                      {group.map(s => (
+                        <div key={s.id} className="flex items-center gap-3 p-4 rounded-2xl border border-gray-100">
+                          <div className="w-10 h-10 rounded-xl bg-[#E8F0EA] flex items-center justify-center flex-shrink-0">
+                            <svg className="w-5 h-5 text-[#2D5A3D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900">{s.name}</p>
+                            <p className="text-sm font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(s.price)}</p>
+                          </div>
+                          <button onClick={() => router.push(`/services/${s.id}/edit`)} className="p-2 text-gray-400 active:text-[#2D5A3D]">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button onClick={() => handleDeleteService(s.id, s.name)} disabled={deletingSvc === s.id} className="p-2 text-gray-300 active:text-red-400">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <button onClick={() => router.push(`/services/${s.id}/edit`)} className="p-2 text-gray-400 active:text-[#2D5A3D]">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  <button onClick={() => handleDeleteService(s.id, s.name)} disabled={deletingSvc === s.id} className="p-2 text-gray-300 active:text-red-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )
         ) : (
