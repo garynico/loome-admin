@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: #2D5A3D;
+  --brand-light: #E8F0EA;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #ffffff;
+  color: #111827;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Touch-friendly tap targets */
+.tap-target { min-height: 44px; min-width: 44px; }
+
+/* Smooth scroll snap for date strip */
+.date-strip {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.date-item {
+  scroll-snap-align: center;
+}
+
+/* Timeline slot */
+.timeline-slot {
+  border-top: 1px solid #f3f4f6;
+}
