@@ -109,15 +109,29 @@ export default function OrdersPage() {
 
   const filtered = getFiltered()
 
-  // Group by date
-  const grouped: { dateStr: string; bookings: BookingWithRelations[] }[] = []
-  const seenDates = new Set<string>()
-  for (const b of filtered) {
-    if (!seenDates.has(b.date)) {
-      seenDates.add(b.date)
-      grouped.push({ dateStr: b.date, bookings: filtered.filter(x => x.date === b.date) })
+  function groupByDate(list: BookingWithRelations[]) {
+    const result: { dateStr: string; bookings: BookingWithRelations[] }[] = []
+    const seen = new Set<string>()
+    for (const b of list) {
+      if (!seen.has(b.date)) {
+        seen.add(b.date)
+        result.push({ dateStr: b.date, bookings: list.filter(x => x.date === b.date) })
+      }
     }
+    return result
   }
+
+  // For "all" tab: split into upcoming confirmed and everything else
+  const upcomingBookings = allBookings
+    .filter(b => b.status === 'confirmed' && b.date >= todayStr)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+  const pastBookings = allBookings
+    .filter(b => !(b.status === 'confirmed' && b.date >= todayStr))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
+
+  const upcomingGrouped = groupByDate(upcomingBookings)
+  const pastGrouped = groupByDate(pastBookings)
+  const grouped = groupByDate(filtered)
 
   function formatDateLabel(dateStr: string) {
     const d = parseISO(dateStr)
@@ -320,7 +334,15 @@ export default function OrdersPage() {
               </div>
             )}
 
-            {grouped.map(({ dateStr, bookings: dayBookings }) => (
+            {tab === 'all' && upcomingGrouped.length > 0 && (
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-bold text-[#2D5A3D] uppercase tracking-wide">Mendatang</span>
+                <div className="flex-1 h-px bg-[#E8F0EA]" />
+                <span className="text-xs text-gray-400">{upcomingBookings.length} janji</span>
+              </div>
+            )}
+
+            {(tab === 'all' ? upcomingGrouped : grouped).map(({ dateStr, bookings: dayBookings }) => (
               <div key={dateStr} className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-semibold text-gray-500">{formatDateLabel(dateStr)}</span>
@@ -394,6 +416,63 @@ export default function OrdersPage() {
                 </div>
               </div>
             ))}
+
+            {/* Past section — only in Semua tab */}
+            {tab === 'all' && pastGrouped.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mt-2 mb-3">
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Riwayat</span>
+                  <div className="flex-1 h-px bg-gray-100" />
+                  <span className="text-xs text-gray-400">{pastBookings.length} janji</span>
+                </div>
+                {pastGrouped.map(({ dateStr, bookings: dayBookings }) => (
+                  <div key={dateStr} className="mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-semibold text-gray-400">{formatDateLabel(dateStr)}</span>
+                      <div className="flex-1 h-px bg-gray-100" />
+                      <span className="text-xs text-gray-400">{dayBookings.length} janji</span>
+                    </div>
+                    <div className="space-y-2">
+                      {dayBookings.map(booking => {
+                        const sc = statusColors[booking.status]
+                        return (
+                          <div
+                            key={booking.id}
+                            onClick={() => router.push(`/bookings/${booking.id}`)}
+                            className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-gray-100 active:bg-gray-50 cursor-pointer opacity-75"
+                          >
+                            <div className="w-12 flex-shrink-0 text-center">
+                              <span className="text-sm font-bold text-gray-400">{booking.time.slice(0, 5)}</span>
+                              {(() => {
+                                const dur = booking.duration_minutes ?? 60
+                                const [h, m] = booking.time.slice(0, 5).split(':').map(Number)
+                                const end = h * 60 + m + dur
+                                return <span className="block text-[10px] text-gray-300">{String(Math.floor(end / 60)).padStart(2, '0')}:{String(end % 60).padStart(2, '0')}</span>
+                              })()}
+                            </div>
+                            <div className="w-px h-10 bg-gray-100 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-700 truncate">{booking.customer?.name}</p>
+                              <p className="text-xs text-gray-400 mt-0.5 truncate">
+                                {booking.services?.length
+                                  ? booking.services.map(s => s.name).join(', ')
+                                  : (booking.service?.name ?? 'Layanan dihapus')}
+                              </p>
+                            </div>
+                            <span
+                              className="text-[10px] font-semibold px-2 py-1 rounded-full flex-shrink-0"
+                              style={{ background: sc.bg, color: sc.text }}
+                            >
+                              {statusLabels[booking.status]}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
