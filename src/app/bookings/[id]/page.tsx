@@ -118,6 +118,7 @@ export default function BookingDetailPage() {
   const totalPrice = booking.custom_price ?? svcList.reduce((s, x) => s + x.price, 0)
   const svcNames = svcList.map(s => s.name).join(', ') || 'Layanan'
   const locationBlock = `Lokasi:\n📍Loome Hair Removal\nhttps://maps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic`
+  const locationBlockPlain = `Lokasi: 📍Loome Hair Removal`
   const waMsg = encodeURIComponent(
     `Halo ${booking.customer?.name},\n\n` +
     `Berikut konfirmasi janji Anda di Loome Hair Removal:\n\n` +
@@ -133,7 +134,7 @@ export default function BookingDetailPage() {
     `📋 Layanan: ${svcNames}\n` +
     `📅 Tanggal: ${dateFormatted}\n` +
     `⏰ Waktu: ${booking.time.slice(0, 5)}\n\n` +
-    `${locationBlock}\n\n` +
+    `${locationBlockPlain}\n\n` +
     `Mohon dibantu konfirmasi dengan memilih salah satu jawaban: Hadir, Batal, Reschedule.\n` +
     `Terimakasih banyak kak! 💚`
   )

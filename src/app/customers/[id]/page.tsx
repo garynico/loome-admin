@@ -181,7 +181,7 @@ export default function CustomerProfilePage() {
     `📋 Layanan: ${nextBooking.service?.name ?? 'Layanan'}\n` +
     `📅 Tanggal: ${format(parseISO(nextBooking.date), 'EEEE, d MMMM yyyy', { locale: id })}\n` +
     `⏰ Waktu: ${nextBooking.time.slice(0, 5)}\n\n` +
-    `Lokasi:\n📍Loome Hair Removal\nhttps://maps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
+    `Lokasi: 📍Loome Hair Removal\n\n` +
     `Mohon dibantu konfirmasi dengan memilih salah satu jawaban: Hadir, Batal, Reschedule.\n` +
     `Terimakasih banyak kak! 💚`
   ) : null
