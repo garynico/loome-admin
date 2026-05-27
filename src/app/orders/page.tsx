@@ -8,7 +8,7 @@ import type { BookingWithRelations, CustomerPackage } from '@/types'
 import BottomNav from '@/components/BottomNav'
 import Image from 'next/image'
 
-type Tab = 'all' | 'upcoming' | 'completed' | 'cancelled'
+type Tab = 'all' | 'upcoming' | 'completed' | 'cancelled' | 'packages'
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price)
@@ -32,7 +32,6 @@ export default function OrdersPage() {
   const [allPurchases, setAllPurchases] = useState<CustomerPackage[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('all')
-  const [packagesExpanded, setPackagesExpanded] = useState(false)
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -145,13 +144,15 @@ export default function OrdersPage() {
     { key: 'upcoming', label: 'Mendatang' },
     { key: 'completed', label: 'Selesai' },
     { key: 'cancelled', label: 'Batal' },
+    { key: 'packages', label: 'Paket' },
   ]
 
   const tabCounts = {
-    all: allBookings.length + allPurchases.length,
+    all: allBookings.length,
     upcoming: allBookings.filter(b => b.status === 'confirmed' && b.date >= todayStr).length,
     completed: allBookings.filter(b => b.status === 'completed').length,
     cancelled: allBookings.filter(b => b.status === 'cancelled').length,
+    packages: allPurchases.length,
   }
 
   return (
@@ -204,7 +205,7 @@ export default function OrdersPage() {
       </header>
 
       {/* Follow-up banner — today + tomorrow confirmed bookings */}
-      {!loading && (() => {
+      {!loading && tab !== 'packages' && (() => {
         const todayBookings = allBookings.filter(b => b.date === todayStr && b.status === 'confirmed')
         const tomorrowBookings = allBookings.filter(b => b.date === tomorrowStr && b.status === 'confirmed')
         if (todayBookings.length === 0 && tomorrowBookings.length === 0) return null
@@ -266,7 +267,66 @@ export default function OrdersPage() {
           <div className="flex justify-center py-16">
             <div className="w-5 h-5 rounded-full border-2 border-[#2D5A3D] border-t-transparent animate-spin" />
           </div>
-        ) : filtered.length === 0 && (tab !== 'all' || allPurchases.length === 0) ? (
+        ) : tab === 'packages' ? (
+          <div className="px-4 pt-3">
+            {allPurchases.length === 0 ? (
+              <div className="flex flex-col items-center py-20 text-gray-400 gap-3">
+                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                <p className="text-sm">Belum ada pembelian paket</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-[#2D5A3D] uppercase tracking-wide">Pembelian Paket</span>
+                  <span className="text-xs text-gray-400">
+                    Total {formatPrice(allPurchases.reduce((s, p) => s + p.paid_price, 0))}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {allPurchases
+                    .slice()
+                    .sort((a, b) => b.purchased_at.localeCompare(a.purchased_at))
+                    .map(cp => (
+                      <div
+                        key={cp.id}
+                        onClick={() => router.push(`/customers/${cp.customer_id}`)}
+                        className="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-100 active:bg-gray-50 cursor-pointer"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-[#E8F0EA] flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-[#2D5A3D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{cp.customer?.name ?? '—'}</p>
+                          <p className="text-xs text-gray-500 mt-0.5 truncate">
+                            {cp.package_name} · {cp.sessions_total}x sesi
+                          </p>
+                          <p className="text-xs font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(cp.paid_price)}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <span
+                            className="text-[10px] font-semibold px-2 py-1 rounded-full"
+                            style={{
+                              background: cp.status === 'active' ? '#E8F0EA' : '#f3f4f6',
+                              color: cp.status === 'active' ? '#2D5A3D' : '#9ca3af',
+                            }}
+                          >
+                            {cp.status === 'active' ? 'Aktif' : 'Selesai'}
+                          </span>
+                          <p className="text-[10px] text-gray-400 mt-1">
+                            {format(parseISO(cp.purchased_at.slice(0, 10)), 'd MMM yyyy', { locale: id })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </>
+            )}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center py-20 text-gray-400 gap-3">
             <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
@@ -275,65 +335,6 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="px-4 pt-3">
-            {/* Package purchases — collapsible, only shown in Semua tab */}
-            {tab === 'all' && allPurchases.length > 0 && (
-              <div className="mb-4">
-                <button
-                  type="button"
-                  onClick={() => setPackagesExpanded(v => !v)}
-                  className="flex items-center gap-2 w-full mb-2"
-                >
-                  <span className="text-xs font-semibold text-gray-500">Pembelian Paket</span>
-                  <div className="flex-1 h-px bg-gray-100" />
-                  <span className="text-xs text-gray-400">{allPurchases.length} paket</span>
-                  <svg
-                    className="w-3.5 h-3.5 text-gray-400 transition-transform flex-shrink-0"
-                    style={{ transform: packagesExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {packagesExpanded && (
-                  <div className="space-y-2">
-                    {allPurchases
-                      .slice()
-                      .sort((a, b) => b.purchased_at.localeCompare(a.purchased_at))
-                      .map(cp => (
-                        <div
-                          key={cp.id}
-                          className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-gray-100"
-                        >
-                          <div className="w-12 flex-shrink-0 flex flex-col items-center gap-0.5">
-                            <div className="w-8 h-8 rounded-lg bg-[#E8F0EA] flex items-center justify-center">
-                              <svg className="w-4 h-4 text-[#2D5A3D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                              </svg>
-                            </div>
-                          </div>
-                          <div className="w-px h-10 bg-gray-100 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 truncate">{cp.customer?.name ?? '—'}</p>
-                            <p className="text-xs text-gray-500 mt-0.5 truncate">
-                              {cp.package_name} · {cp.sessions_total}x
-                            </p>
-                            <p className="text-xs font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(cp.paid_price)}</p>
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-[#E8F0EA] text-[#2D5A3D]">
-                              Paket
-                            </span>
-                            <p className="text-[10px] text-gray-400 mt-1">
-                              {format(parseISO(cp.purchased_at.slice(0, 10)), 'd MMM', { locale: id })}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            )}
-
             {tab === 'all' && upcomingGrouped.length > 0 && (
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-bold text-[#2D5A3D] uppercase tracking-wide">Mendatang</span>
