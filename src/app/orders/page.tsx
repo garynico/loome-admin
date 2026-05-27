@@ -209,9 +209,10 @@ export default function OrdersPage() {
         </div>
       </header>
 
-      {/* Follow-up banner — today + tomorrow confirmed bookings */}
-      {!loading && tab !== 'packages' && (() => {
-        const todayBookings = allBookings.filter(b => b.date === todayStr && b.status === 'confirmed')
+      {/* Follow-up banner — only on Mendatang tab */}
+      {!loading && tab === 'upcoming' && (() => {
+        const nowTimeStr = format(new Date(), 'HH:mm')
+        const todayBookings = allBookings.filter(b => b.date === todayStr && b.status === 'confirmed' && b.time.slice(0, 5) >= nowTimeStr)
         const tomorrowBookings = allBookings.filter(b => b.date === tomorrowStr && b.status === 'confirmed')
         if (todayBookings.length === 0 && tomorrowBookings.length === 0) return null
         const WA_ICON_SM = (
