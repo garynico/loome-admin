@@ -32,6 +32,10 @@ export default function CustomerProfilePage() {
   const [saving, setSaving] = useState(false)
   const [editError, setEditError] = useState('')
 
+  const [editingNotes, setEditingNotes] = useState(false)
+  const [notesInput, setNotesInput] = useState('')
+  const [notesSaving, setNotesSaving] = useState(false)
+
   const [customerPackages, setCustomerPackages] = useState<CustomerPackage[]>([])
   const [showBuyPackage, setShowBuyPackage] = useState(false)
   const [availablePackages, setAvailablePackages] = useState<Package[]>([])
@@ -129,6 +133,20 @@ export default function CustomerProfilePage() {
       setEditError('Gagal menyimpan perubahan')
     }
     setSaving(false)
+  }
+
+  async function saveNotes() {
+    setNotesSaving(true)
+    const res = await fetch(`/api/customers/${customerId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: notesInput.trim() || null }),
+    })
+    if (res.ok) {
+      setCustomer(await res.json())
+      setEditingNotes(false)
+    }
+    setNotesSaving(false)
   }
 
   async function handleDelete() {
@@ -255,6 +273,52 @@ export default function CustomerProfilePage() {
             <p className="text-sm font-bold text-gray-900 leading-tight">{topService ?? '—'}</p>
             <p className="text-xs text-gray-500 font-medium mt-0.5">Layanan Favorit</p>
           </div>
+        </div>
+
+        {/* Admin notes */}
+        <div className="px-4 py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-gray-700">Catatan Admin</h3>
+            {!editingNotes && (
+              <button
+                onClick={() => { setNotesInput(customer.notes ?? ''); setEditingNotes(true) }}
+                className="text-xs text-[#2D5A3D] font-semibold active:opacity-70"
+              >
+                {customer.notes ? 'Edit' : '+ Tambah'}
+              </button>
+            )}
+          </div>
+          {editingNotes ? (
+            <div className="space-y-2">
+              <textarea
+                value={notesInput}
+                onChange={e => setNotesInput(e.target.value)}
+                rows={3}
+                autoFocus
+                className="w-full px-3 py-2.5 rounded-xl border border-[#2D5A3D] bg-gray-50 text-sm text-gray-900 focus:outline-none resize-none"
+                placeholder="Contoh: kulit sensitif, alergi X, referral dari Y..."
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={saveNotes}
+                  disabled={notesSaving}
+                  className="flex-1 py-2 rounded-xl bg-[#2D5A3D] text-white text-sm font-semibold disabled:opacity-50 active:opacity-80"
+                >
+                  {notesSaving ? 'Menyimpan...' : 'Simpan'}
+                </button>
+                <button
+                  onClick={() => setEditingNotes(false)}
+                  className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 active:bg-gray-50"
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          ) : customer.notes ? (
+            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{customer.notes}</p>
+          ) : (
+            <p className="text-sm text-gray-400">Belum ada catatan</p>
+          )}
         </div>
 
         {/* Active packages */}

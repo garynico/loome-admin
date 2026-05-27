@@ -24,12 +24,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json()
-  const { name, phone, gender } = body
+  const { name, phone, gender, notes } = body
 
   const updates: Record<string, unknown> = {}
   if (name !== undefined) updates.name = name
   if (phone !== undefined) updates.phone = phone
   if (gender !== undefined) updates.gender = gender
+  if (notes !== undefined) updates.notes = notes
 
   const { data, error } = await supabase
     .from('customers')

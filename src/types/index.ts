@@ -3,6 +3,7 @@ export interface Customer {
   name: string
   phone: string
   gender: 'male' | 'female' | null
+  notes: string | null
   created_at: string
 }
 
