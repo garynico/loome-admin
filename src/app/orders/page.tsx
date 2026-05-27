@@ -451,7 +451,7 @@ export default function OrdersPage() {
                           <div
                             key={booking.id}
                             onClick={() => router.push(`/bookings/${booking.id}`)}
-                            className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-gray-100 active:bg-gray-50 cursor-pointer opacity-75"
+                            className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-gray-100 active:bg-gray-50 cursor-pointer"
                           >
                             <div className="w-12 flex-shrink-0 text-center">
                               <span className="text-sm font-bold text-gray-400">{booking.time.slice(0, 5)}</span>
