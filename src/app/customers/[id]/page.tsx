@@ -261,7 +261,7 @@ export default function CustomerProfilePage() {
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-[#2D5A3D]">Janji mendatang</p>
                 <p className="text-xs text-[#2D5A3D] truncate">
-                  {format(parseISO(nextBooking.date), 'd MMM yyyy', { locale: id })} · {nextBooking.time.slice(0, 5)} · {nextBooking.service?.name}
+                  {format(parseISO(nextBooking.date), 'd MMM yyyy', { locale: id })} · {nextBooking.time.slice(0, 5)} · {nextBooking.services?.length ? nextBooking.services.map(s => s.name).join(', ') : nextBooking.service?.name}
                 </p>
               </div>
             </div>

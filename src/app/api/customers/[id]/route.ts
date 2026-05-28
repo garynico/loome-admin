@@ -3,6 +3,20 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+async function attachServices(bookings: Record<string, unknown>[]) {
+  const allIds = Array.from(new Set(bookings.flatMap(b => (b.service_ids as string[] | null) ?? [])))
+  const serviceMap: Record<string, unknown> = {}
+  if (allIds.length > 0) {
+    const { data } = await supabase.from('services').select('*').in('id', allIds)
+    for (const s of data ?? []) serviceMap[(s as { id: string }).id] = s
+  }
+  return bookings.map(b => {
+    const ids = (b.service_ids as string[] | null) ?? (b.service_id ? [b.service_id as string] : [])
+    const services = ids.map(id => serviceMap[id]).filter(Boolean)
+    return { ...b, services: services.length ? services : (b.service ? [b.service] : []) }
+  })
+}
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const { data: customer, error } = await supabase
     .from('customers')
@@ -19,7 +33,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     .order('date', { ascending: false })
     .order('time', { ascending: false })
 
-  return NextResponse.json({ customer, bookings: bookings ?? [] })
+  const enriched = await attachServices((bookings ?? []) as Record<string, unknown>[])
+  return NextResponse.json({ customer, bookings: enriched })
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
