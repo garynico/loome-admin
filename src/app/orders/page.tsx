@@ -83,6 +83,16 @@ export default function OrdersPage() {
     load()
   }, [])
 
+  const searchedBookings = search.trim()
+    ? allBookings.filter(b => {
+        const q = search.toLowerCase()
+        const customerMatch = b.customer?.name.toLowerCase().includes(q)
+        const svcList = b.services?.length ? b.services : b.service ? [b.service] : []
+        const serviceMatch = svcList.some(s => s.name.toLowerCase().includes(q))
+        return customerMatch || serviceMatch
+      })
+    : allBookings
+
   function getFiltered(): BookingWithRelations[] {
     switch (tab) {
       case 'upcoming':
@@ -122,16 +132,6 @@ export default function OrdersPage() {
     }
     return result
   }
-
-  const searchedBookings = search.trim()
-    ? allBookings.filter(b => {
-        const q = search.toLowerCase()
-        const customerMatch = b.customer?.name.toLowerCase().includes(q)
-        const svcList = b.services?.length ? b.services : b.service ? [b.service] : []
-        const serviceMatch = svcList.some(s => s.name.toLowerCase().includes(q))
-        return customerMatch || serviceMatch
-      })
-    : allBookings
 
   // For "all" tab: three sections
   const upcomingBookings = searchedBookings
