@@ -138,6 +138,9 @@ function NewBookingForm() {
     setShowCustomerList(false)
     setCustomerListSearch('')
     setServicesExpanded(false)
+    setServiceIds([])
+    setUsePackageId(null)
+    setPriceEditing(false)
   }
 
   async function openCustomerList() {
@@ -186,7 +189,7 @@ function NewBookingForm() {
         time,
         duration_minutes: calcDuration(time, endTime),
         notes,
-        custom_price: finalPrice,
+        custom_price: displayTotal,
         dp_amount: hasDp && Number(dpRaw) > 0 ? Number(dpRaw) : 0,
         customer_package_id: usePackageId ?? null,
       }),

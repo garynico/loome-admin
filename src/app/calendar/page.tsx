@@ -119,6 +119,7 @@ export default function CalendarPage() {
   const touchLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartY = useRef(0)
   const touchStartTime = useRef('')
+  const selectedFormattedRef = useRef(format(new Date(), 'yyyy-MM-dd'))
 
   const stripDays = eachDayOfInterval({
     start: subDays(new Date(), 14),
@@ -169,6 +170,8 @@ export default function CalendarPage() {
   }
 
   const selectedFormatted = format(selectedDate, 'yyyy-MM-dd')
+  // Keep ref in sync so global mouse handlers always have the current date
+  useEffect(() => { selectedFormattedRef.current = selectedFormatted }, [selectedFormatted])
 
   function getTimelineY(clientY: number): number {
     if (!timelineRef.current) return 0
@@ -183,23 +186,31 @@ export default function CalendarPage() {
     setDragState({ startY: y, endY: y, startTime: yToTime(y) })
   }
 
-  function handleMouseMove(e: React.MouseEvent) {
-    if (!dragStarted.current) return
-    const y = getTimelineY(e.clientY)
-    setDragState(prev => prev ? { ...prev, endY: Math.max(y, prev.startY + 2) } : null)
-  }
-
-  function handleMouseUp() {
-    if (!dragStarted.current) return
-    dragStarted.current = false
-    setDragState(current => {
-      if (current) {
-        const endTime = yToTime(current.endY)
-        router.push(`/bookings/new?date=${selectedFormatted}&time=${current.startTime}&endtime=${endTime}`)
-      }
-      return null
-    })
-  }
+  // Global mouse handlers so drag works even when cursor leaves the timeline
+  useEffect(() => {
+    function onGlobalMouseMove(e: MouseEvent) {
+      if (!dragStarted.current) return
+      const y = getTimelineY(e.clientY)
+      setDragState(prev => prev ? { ...prev, endY: Math.max(y, prev.startY + 2) } : null)
+    }
+    function onGlobalMouseUp() {
+      if (!dragStarted.current) return
+      dragStarted.current = false
+      setDragState(current => {
+        if (current) {
+          const endTime = yToTime(current.endY)
+          router.push(`/bookings/new?date=${selectedFormattedRef.current}&time=${current.startTime}&endtime=${endTime}`)
+        }
+        return null
+      })
+    }
+    window.addEventListener('mousemove', onGlobalMouseMove)
+    window.addEventListener('mouseup', onGlobalMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', onGlobalMouseMove)
+      window.removeEventListener('mouseup', onGlobalMouseUp)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Attach touchmove with passive:false so we can preventDefault during drag
   useEffect(() => {
@@ -399,8 +410,6 @@ export default function CalendarPage() {
                 className="relative select-none cursor-crosshair"
                 style={{ height: TIMELINE_HEIGHT + 60 }}
                 onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
                 onTouchStart={handleTimelineTouchStart}
                 onTouchEnd={handleTimelineTouchEnd}
               >

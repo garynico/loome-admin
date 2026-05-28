@@ -214,10 +214,11 @@ export default function BookingDetailPage() {
                   const calcTotal = svcList.reduce((s, x) => s + x.price, 0)
                   const total = booking.custom_price ?? calcTotal
                   if (svcList.length === 0) return null
+                  const priceEdited = booking.custom_price != null && booking.custom_price !== calcTotal
                   return (
                     <div className="flex justify-between items-center mt-1 pt-1 border-t border-gray-200">
                       <p className="text-xs font-semibold text-gray-600">
-                        Total{booking.custom_price ? ' (diedit)' : ''}
+                        Total{priceEdited ? ' (diedit)' : ''}
                       </p>
                       <p className="text-sm font-bold text-[#2D5A3D]">{formatPrice(total)}</p>
                     </div>

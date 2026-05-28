@@ -83,7 +83,30 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const { data: current } = await supabase
+    .from('bookings')
+    .select('status, customer_package_id')
+    .eq('id', params.id)
+    .single()
+
   const { error } = await supabase.from('bookings').delete().eq('id', params.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Restore package session unless booking was already cancelled (cancel already restored it)
+  if (current && current.customer_package_id && current.status !== 'cancelled') {
+    const { data: cp } = await supabase
+      .from('customer_packages')
+      .select('sessions_used, sessions_total')
+      .eq('id', current.customer_package_id)
+      .single()
+    if (cp) {
+      const newUsed = Math.max(0, cp.sessions_used - 1)
+      await supabase.from('customer_packages').update({
+        sessions_used: newUsed,
+        status: newUsed < cp.sessions_total ? 'active' : 'completed',
+      }).eq('id', current.customer_package_id)
+    }
+  }
+
   return NextResponse.json({ ok: true })
 }
