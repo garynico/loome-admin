@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import BottomNav from '@/components/BottomNav'
 import {
   format, addDays, subDays, startOfMonth, endOfMonth,
@@ -99,8 +99,9 @@ function computeLayout(bookings: BookingWithRelations[]): Map<string, { col: num
   return result
 }
 
-export default function CalendarPage() {
+function CalendarContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [selectedDate, setSelectedDate] = useState(() => {
     if (typeof window !== 'undefined') {
       const d = new URLSearchParams(window.location.search).get('date')
@@ -149,6 +150,18 @@ export default function CalendarPage() {
       setMonthBookingDates(new Set(data.map(b => b.date)))
     }
   }, [])
+
+  // Sync selectedDate when URL ?date= param changes (e.g. navigating back from new booking)
+  useEffect(() => {
+    const d = searchParams.get('date')
+    if (d) {
+      try {
+        const parsed = parseISO(d)
+        setSelectedDate(parsed)
+        setView('day')
+      } catch { /* ignore invalid date */ }
+    }
+  }, [searchParams])
 
   useEffect(() => { fetchDayBookings(selectedDate) }, [selectedDate, fetchDayBookings])
   useEffect(() => { if (view === 'month') fetchMonthDates(currentMonth) }, [view, currentMonth, fetchMonthDates])
@@ -641,6 +654,14 @@ export default function CalendarPage() {
 
       <BottomNav active="calendar" />
     </div>
+  )
+}
+
+export default function CalendarPage() {
+  return (
+    <Suspense>
+      <CalendarContent />
+    </Suspense>
   )
 }
 
