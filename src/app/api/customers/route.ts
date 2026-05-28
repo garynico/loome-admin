@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')
 
-  let query = supabase.from('customers').select('*').order('name')
+  let query = supabase.from('customers').select('*').eq('is_deleted', false).order('name')
 
   if (q) {
     query = query.or(`name.ilike.%${q}%,phone.ilike.%${q}%`)

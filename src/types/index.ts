@@ -4,6 +4,7 @@ export interface Customer {
   phone: string
   gender: 'male' | 'female' | null
   notes: string | null
+  is_deleted: boolean
   created_at: string
 }
 

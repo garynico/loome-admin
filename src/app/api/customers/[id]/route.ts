@@ -59,7 +59,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await supabase.from('customers').delete().eq('id', params.id)
+  const { error } = await supabase
+    .from('customers')
+    .update({ is_deleted: true })
+    .eq('id', params.id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
+export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+  // Restore a soft-deleted customer
+  const { error } = await supabase
+    .from('customers')
+    .update({ is_deleted: false })
+    .eq('id', params.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
