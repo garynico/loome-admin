@@ -96,7 +96,7 @@ export default function CustomerProfilePage() {
     setBuyingSaving(false)
   }
 
-  const completedBookings = bookings.filter(b => b.status !== 'cancelled')
+  const completedBookings = bookings.filter(b => b.status === 'completed')
   const serviceCount: Record<string, number> = {}
   completedBookings.forEach(b => {
     if (b.service?.name) serviceCount[b.service.name] = (serviceCount[b.service.name] ?? 0) + 1
@@ -104,8 +104,9 @@ export default function CustomerProfilePage() {
   const topService = Object.entries(serviceCount).sort((a, b) => b[1] - a[1])[0]?.[0]
 
   const todayStr = format(new Date(), 'yyyy-MM-dd')
-  const nextBooking = bookings
-    .filter(b => b.status === 'confirmed' && b.date >= todayStr)
+  const upcomingBookings = bookings.filter(b => b.status === 'confirmed' && b.date >= todayStr)
+  const nextBooking = upcomingBookings
+    .slice()
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))[0]
 
   function startEdit() {
@@ -175,10 +176,14 @@ export default function CustomerProfilePage() {
 
   const waPhone = customer.phone.replace(/^0/, '62').replace(/[^0-9]/g, '')
 
+  const nextBookingSvcNames = nextBooking
+    ? (nextBooking.services?.length ? nextBooking.services.map(s => s.name).join(', ') : nextBooking.service?.name ?? 'Layanan')
+    : null
+
   const waReminderMsg = nextBooking ? encodeURIComponent(
     `Halo ${customer.name},\n` +
     `Kami ingin mengingatkan jadwal treatment kakak pada:\n\n` +
-    `📋 Layanan: ${nextBooking.service?.name ?? 'Layanan'}\n` +
+    `📋 Layanan: ${nextBookingSvcNames}\n` +
     `📅 Tanggal: ${format(parseISO(nextBooking.date), 'EEEE, d MMMM yyyy', { locale: id })}\n` +
     `⏰ Waktu: ${nextBooking.time.slice(0, 5)}\n\n` +
     `Lokasi:\n📍Loome Hair Removal\nhttps://maps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
@@ -264,14 +269,18 @@ export default function CustomerProfilePage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 px-4 py-4 border-b border-gray-100">
-          <div className="bg-[#E8F0EA] rounded-2xl p-4">
+        <div className="grid grid-cols-3 gap-2 px-4 py-4 border-b border-gray-100">
+          <div className="bg-[#E8F0EA] rounded-2xl p-3">
             <p className="text-2xl font-bold text-[#2D5A3D]">{completedBookings.length}</p>
-            <p className="text-xs text-[#2D5A3D] font-medium mt-0.5">Total Kunjungan</p>
+            <p className="text-xs text-[#2D5A3D] font-medium mt-0.5">Kunjungan</p>
           </div>
-          <div className="bg-gray-50 rounded-2xl p-4">
+          <div className="bg-blue-50 rounded-2xl p-3">
+            <p className="text-2xl font-bold text-blue-600">{upcomingBookings.length}</p>
+            <p className="text-xs text-blue-500 font-medium mt-0.5">Mendatang</p>
+          </div>
+          <div className="bg-gray-50 rounded-2xl p-3">
             <p className="text-sm font-bold text-gray-900 leading-tight">{topService ?? '—'}</p>
-            <p className="text-xs text-gray-500 font-medium mt-0.5">Layanan Favorit</p>
+            <p className="text-xs text-gray-500 font-medium mt-0.5">Favorit</p>
           </div>
         </div>
 
