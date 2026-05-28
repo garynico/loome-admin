@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { format, parseISO } from 'date-fns'
 import { id } from 'date-fns/locale'
-import type { BookingWithRelations } from '@/types'
+import type { BookingWithRelations, Service } from '@/types'
 import TimePicker from '@/components/TimePicker'
 
 function formatPrice(price: number) {
@@ -34,6 +34,11 @@ export default function BookingDetailPage() {
   const [rsStartTime, setRsStartTime] = useState('')
   const [rsEndTime, setRsEndTime] = useState('')
   const [rsSaving, setRsSaving] = useState(false)
+
+  const [showEditServices, setShowEditServices] = useState(false)
+  const [allServices, setAllServices] = useState<Service[]>([])
+  const [editServiceIds, setEditServiceIds] = useState<string[]>([])
+  const [savingServices, setSavingServices] = useState(false)
 
   useEffect(() => {
     fetch(`/api/bookings/${bookingId}`)
@@ -92,6 +97,29 @@ export default function BookingDetailPage() {
       setShowReschedule(false)
     }
     setRsSaving(false)
+  }
+
+  async function openEditServices() {
+    const current = (booking?.services?.length ? booking.services : booking?.service ? [booking.service] : []).map(s => s.id)
+    setEditServiceIds(current)
+    if (allServices.length === 0) {
+      const res = await fetch('/api/services')
+      if (res.ok) setAllServices(await res.json())
+    }
+    setShowEditServices(true)
+  }
+
+  async function saveEditServices() {
+    if (editServiceIds.length === 0) return
+    setSavingServices(true)
+    const newTotal = allServices.filter(s => editServiceIds.includes(s.id)).reduce((sum, s) => sum + s.price, 0)
+    const res = await fetch(`/api/bookings/${bookingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ service_ids: editServiceIds, custom_price: newTotal }),
+    })
+    if (res.ok) { setBooking(await res.json()); setShowEditServices(false) }
+    setSavingServices(false)
   }
 
   if (loading) {
@@ -201,7 +229,12 @@ export default function BookingDetailPage() {
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-500 mb-1">Layanan</p>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-gray-500">Layanan</p>
+                  {booking.status === 'confirmed' && (
+                    <button onClick={openEditServices} className="text-xs text-[#2D5A3D] font-semibold active:opacity-70">Edit</button>
+                  )}
+                </div>
                 {(booking.services?.length ? booking.services : booking.service ? [booking.service] : []).map(s => (
                   <div key={s.id} className="flex justify-between items-center">
                     <p className="text-sm font-semibold text-gray-900">{s.name}</p>
@@ -408,6 +441,59 @@ export default function BookingDetailPage() {
               className="w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base disabled:opacity-40 active:opacity-80"
             >
               {rsSaving ? 'Menyimpan...' : 'Simpan Jadwal Baru'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit services bottom sheet */}
+      {showEditServices && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowEditServices(false)} />
+          <div className="relative bg-white rounded-t-3xl px-4 pt-5 pb-8 max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-gray-900">Edit Layanan</h2>
+              <button onClick={() => setShowEditServices(false)} className="p-1 text-gray-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 space-y-2 mb-4">
+              {allServices.filter(s => s.is_active || editServiceIds.includes(s.id)).map(s => {
+                const selected = editServiceIds.includes(s.id)
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setEditServiceIds(prev => prev.includes(s.id) ? prev.filter(x => x !== s.id) : [...prev, s.id])}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl border text-left active:opacity-80"
+                    style={{ borderColor: selected ? '#2D5A3D' : '#e5e7eb', background: selected ? '#E8F0EA' : '#fff' }}
+                  >
+                    <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 border-2"
+                      style={{ borderColor: selected ? '#2D5A3D' : '#d1d5db', background: selected ? '#2D5A3D' : 'transparent' }}>
+                      {selected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 flex-1">{s.name}</span>
+                    <span className="text-sm font-semibold" style={{ color: selected ? '#2D5A3D' : '#6b7280' }}>{formatPrice(s.price)}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {editServiceIds.length > 0 && (
+              <div className="flex justify-between items-center px-1 mb-3">
+                <span className="text-sm text-gray-500">Total baru</span>
+                <span className="text-base font-bold text-[#2D5A3D]">
+                  {formatPrice(allServices.filter(s => editServiceIds.includes(s.id)).reduce((sum, s) => sum + s.price, 0))}
+                </span>
+              </div>
+            )}
+            <button
+              onClick={saveEditServices}
+              disabled={savingServices || editServiceIds.length === 0}
+              className="w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base disabled:opacity-40 active:opacity-80"
+            >
+              {savingServices ? 'Menyimpan...' : 'Simpan Layanan'}
             </button>
           </div>
         </div>

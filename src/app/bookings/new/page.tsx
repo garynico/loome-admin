@@ -257,7 +257,7 @@ function NewBookingForm() {
               Kirim Konfirmasi WhatsApp
             </a>
             <button
-              onClick={() => router.push('/calendar')}
+              onClick={() => router.push(`/calendar?date=${savedBooking.date}`)}
               className="w-full py-3.5 rounded-xl border border-gray-200 text-gray-700 font-semibold text-base active:bg-gray-50"
             >
               Kembali ke Kalender

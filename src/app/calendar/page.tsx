@@ -101,7 +101,13 @@ function computeLayout(bookings: BookingWithRelations[]): Map<string, { col: num
 
 export default function CalendarPage() {
   const router = useRouter()
-  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const d = new URLSearchParams(window.location.search).get('date')
+      if (d) { try { return parseISO(d) } catch { /* ignore */ } }
+    }
+    return new Date()
+  })
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [view, setView] = useState<'day' | 'month'>('day')
   const [bookings, setBookings] = useState<BookingWithRelations[]>([])
@@ -111,6 +117,7 @@ export default function CalendarPage() {
 
   const stripRef = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const stripTouchStartX = useRef(0)
   const stripTouchStartY = useRef(0)
   const tsTouchY = useRef(0)
@@ -145,6 +152,18 @@ export default function CalendarPage() {
 
   useEffect(() => { fetchDayBookings(selectedDate) }, [selectedDate, fetchDayBookings])
   useEffect(() => { if (view === 'month') fetchMonthDates(currentMonth) }, [view, currentMonth, fetchMonthDates])
+
+  // Auto-scroll to current time when viewing today, scroll to top for other dates
+  useEffect(() => {
+    if (loading || view !== 'day' || !scrollContainerRef.current) return
+    if (isToday(selectedDate)) {
+      const now = new Date()
+      const y = timeToY(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`)
+      scrollContainerRef.current.scrollTo({ top: Math.max(0, y - 100), behavior: 'smooth' })
+    } else {
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'auto' })
+    }
+  }, [loading, selectedDate, view])
 
   useEffect(() => {
     if (stripRef.current) {
@@ -399,7 +418,7 @@ export default function CalendarPage() {
           </div>
 
           {/* Google Calendar-style Timeline */}
-          <div className="flex-1 overflow-y-auto">
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex justify-center py-16">
                 <div className="w-5 h-5 rounded-full border-2 border-[#2D5A3D] border-t-transparent animate-spin" />
@@ -437,6 +456,18 @@ export default function CalendarPage() {
                 ))}
                 {/* Final line */}
                 <div className="absolute left-14 right-0 pointer-events-none" style={{ top: TIMELINE_HEIGHT, borderTop: '1px solid #e5e7eb' }} />
+
+                {/* Current time indicator — only for today */}
+                {isToday(selectedDate) && (() => {
+                  const now = new Date()
+                  const y = timeToY(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`)
+                  return (
+                    <div className="absolute left-0 right-0 z-20 pointer-events-none flex items-center" style={{ top: y }}>
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0" style={{ marginLeft: 55 }} />
+                      <div className="flex-1 h-px bg-red-500 mr-2" />
+                    </div>
+                  )
+                })()}
 
                 {/* Bookings — absolutely positioned by time */}
                 {bookings.map(booking => {

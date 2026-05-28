@@ -33,6 +33,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('all')
   const [riwayatExpanded, setRiwayatExpanded] = useState(false)
+  const [search, setSearch] = useState('')
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -85,22 +86,22 @@ export default function OrdersPage() {
   function getFiltered(): BookingWithRelations[] {
     switch (tab) {
       case 'upcoming':
-        return allBookings
+        return searchedBookings
           .filter(b => b.status === 'confirmed' && b.date >= todayStr)
           .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
       case 'completed':
-        return allBookings
+        return searchedBookings
           .filter(b => b.status === 'completed')
           .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
       case 'cancelled':
-        return allBookings
+        return searchedBookings
           .filter(b => b.status === 'cancelled')
           .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
       default: {
-        const upcoming = allBookings
+        const upcoming = searchedBookings
           .filter(b => b.status === 'confirmed' && b.date >= todayStr)
           .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-        const past = allBookings
+        const past = searchedBookings
           .filter(b => !(b.status === 'confirmed' && b.date >= todayStr))
           .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
         return [...upcoming, ...past]
@@ -122,14 +123,24 @@ export default function OrdersPage() {
     return result
   }
 
+  const searchedBookings = search.trim()
+    ? allBookings.filter(b => {
+        const q = search.toLowerCase()
+        const customerMatch = b.customer?.name.toLowerCase().includes(q)
+        const svcList = b.services?.length ? b.services : b.service ? [b.service] : []
+        const serviceMatch = svcList.some(s => s.name.toLowerCase().includes(q))
+        return customerMatch || serviceMatch
+      })
+    : allBookings
+
   // For "all" tab: three sections
-  const upcomingBookings = allBookings
+  const upcomingBookings = searchedBookings
     .filter(b => b.status === 'confirmed' && b.date >= todayStr)
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-  const unprocessedBookings = allBookings
+  const unprocessedBookings = searchedBookings
     .filter(b => b.status === 'confirmed' && b.date < todayStr)
     .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
-  const historyBookings = allBookings
+  const historyBookings = searchedBookings
     .filter(b => b.status !== 'confirmed')
     .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
 
@@ -184,6 +195,20 @@ export default function OrdersPage() {
             </button>
           </div>
         </div>
+        {!loading && tab !== 'packages' && (
+          <div className="relative mb-3">
+            <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="search"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Cari pelanggan atau layanan..."
+              className="w-full pl-9 pr-4 py-2.5 bg-gray-50 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2D5A3D]"
+            />
+          </div>
+        )}
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
           {tabs.map(t => (
             <button
