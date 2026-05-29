@@ -58,24 +58,25 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Restore package session if booking was just cancelled and had a package
-  if (
-    current &&
-    status === 'cancelled' &&
-    current.status !== 'cancelled' &&
-    current.customer_package_id
-  ) {
-    const { data: cp } = await supabase
-      .from('customer_packages')
-      .select('sessions_used, sessions_total')
-      .eq('id', current.customer_package_id)
-      .single()
-    if (cp) {
-      const newUsed = Math.max(0, cp.sessions_used - 1)
-      await supabase.from('customer_packages').update({
-        sessions_used: newUsed,
-        status: newUsed < cp.sessions_total ? 'active' : 'completed',
-      }).eq('id', current.customer_package_id)
+  if (current && current.customer_package_id) {
+    const justCancelled = status === 'cancelled' && current.status !== 'cancelled'
+    const justReconfirmed = status === 'confirmed' && current.status === 'cancelled'
+
+    if (justCancelled || justReconfirmed) {
+      const { data: cp } = await supabase
+        .from('customer_packages')
+        .select('sessions_used, sessions_total')
+        .eq('id', current.customer_package_id)
+        .single()
+      if (cp) {
+        const newUsed = justCancelled
+          ? Math.max(0, cp.sessions_used - 1)
+          : Math.min(cp.sessions_total, cp.sessions_used + 1)
+        await supabase.from('customer_packages').update({
+          sessions_used: newUsed,
+          status: newUsed < cp.sessions_total ? 'active' : 'completed',
+        }).eq('id', current.customer_package_id)
+      }
     }
   }
 
