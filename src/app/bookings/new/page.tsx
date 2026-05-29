@@ -583,11 +583,11 @@ function NewBookingForm() {
               >
                 <div
                   className="w-8 h-5 rounded-full relative transition-colors flex-shrink-0"
-                  style={{ background: scheduleNow ? '#2D5A3D' : '#d1d5db' }}
+                  style={{ background: !scheduleNow ? '#2D5A3D' : '#d1d5db' }}
                 >
                   <div
                     className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all"
-                    style={{ left: scheduleNow ? '14px' : '2px' }}
+                    style={{ left: !scheduleNow ? '14px' : '2px' }}
                   />
                 </div>
                 Jadwalkan nanti
