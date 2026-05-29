@@ -52,8 +52,8 @@ export interface Booking {
   custom_price: number | null
   dp_amount: number
   customer_package_id: string | null
-  date: string
-  time: string
+  date: string | null
+  time: string | null
   duration_minutes: number | null
   notes: string | null
   status: 'confirmed' | 'cancelled' | 'completed'

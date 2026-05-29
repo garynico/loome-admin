@@ -44,8 +44,8 @@ function computeLayout(bookings: BookingWithRelations[]): Map<string, { col: num
   const result = new Map<string, { col: number; total: number }>()
   if (!bookings.length) return result
 
-  const events = bookings.map(b => {
-    const [h, m] = b.time.slice(0, 5).split(':').map(Number)
+  const events = bookings.filter(b => !!b.time).map(b => {
+    const [h, m] = b.time!.slice(0, 5).split(':').map(Number)
     const startMin = h * 60 + m
     const endMin = startMin + (b.duration_minutes ?? 60)
     return { id: b.id, startMin, endMin }
@@ -147,7 +147,7 @@ function CalendarContent() {
     const res = await fetch(`/api/bookings?month=${monthStr}`)
     if (res.ok) {
       const data: BookingWithRelations[] = await res.json()
-      setMonthBookingDates(new Set(data.map(b => b.date)))
+      setMonthBookingDates(new Set(data.map(b => b.date).filter((d): d is string => !!d)))
     }
   }, [])
 
@@ -483,8 +483,8 @@ function CalendarContent() {
                 })()}
 
                 {/* Bookings — absolutely positioned by time */}
-                {bookings.map(booking => {
-                  const top = timeToY(booking.time.slice(0, 5))
+                {bookings.filter(booking => !!booking.time).map(booking => {
+                  const top = timeToY(booking.time!.slice(0, 5))
                   const height = Math.max(durationToHeight(booking.duration_minutes ?? 60), 28)
                   const isCancelled = booking.status === 'cancelled'
                   const isCompleted = booking.status === 'completed'
@@ -530,7 +530,7 @@ function CalendarContent() {
                         </div>
                         {height >= 48 && (
                           <p className="text-[10px] text-gray-500 mt-0.5">
-                            {booking.time.slice(0, 5)} · {booking.duration_minutes ?? 60} mnt
+                            {booking.time!.slice(0, 5)} · {booking.duration_minutes ?? 60} mnt
                           </p>
                         )}
                       </div>
@@ -638,7 +638,7 @@ function CalendarContent() {
                     className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 active:bg-gray-50 text-left"
                   >
                     <div className="w-12 text-center">
-                      <span className="text-xs font-semibold text-[#2D5A3D]">{booking.time.slice(0, 5)}</span>
+                      <span className="text-xs font-semibold text-[#2D5A3D]">{booking.time?.slice(0, 5) ?? '—'}</span>
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-gray-900">{booking.customer?.name}</p>

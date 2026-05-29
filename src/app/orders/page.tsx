@@ -57,13 +57,14 @@ export default function OrdersPage() {
     const svcNames = booking.services?.length
       ? booking.services.map(s => s.name).join(', ')
       : (booking.service?.name ?? 'Layanan')
-    const dateStr = format(parseISO(booking.date), 'EEEE, d MMMM yyyy', { locale: id })
+    const dateStr = booking.date ? format(parseISO(booking.date), 'EEEE, d MMMM yyyy', { locale: id }) : null
     return encodeURIComponent(
       `Halo ${booking.customer?.name},\n` +
       `Kami ingin mengingatkan jadwal treatment kakak pada:\n\n` +
       `📋 Layanan: ${svcNames}\n` +
-      `📅 Tanggal: ${dateStr}\n` +
-      `⏰ Waktu: ${booking.time.slice(0, 5)}\n\n` +
+      (dateStr ? `📅 Tanggal: ${dateStr}\n` : '') +
+      (booking.time ? `⏰ Waktu: ${booking.time.slice(0, 5)}\n` : '') +
+      `\n` +
       `Lokasi:\n📍Loome Hair Removal\nhttps://maps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
       `Mohon dibantu konfirmasi dengan memilih salah satu jawaban: Hadir, Batal, Reschedule.\n` +
       `Terimakasih banyak kak! 💚`
@@ -93,27 +94,33 @@ export default function OrdersPage() {
       })
     : allBookings
 
+  const unscheduledBookings = searchedBookings
+    .filter(b => !b.date && b.status !== 'cancelled')
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+
+  const scheduledBookings = searchedBookings.filter(b => !!b.date)
+
   function getFiltered(): BookingWithRelations[] {
     switch (tab) {
       case 'upcoming':
-        return searchedBookings
-          .filter(b => b.status === 'confirmed' && b.date >= todayStr)
-          .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+        return scheduledBookings
+          .filter(b => b.status === 'confirmed' && b.date! >= todayStr)
+          .sort((a, b) => a.date!.localeCompare(b.date!) || (a.time ?? '').localeCompare(b.time ?? ''))
       case 'completed':
-        return searchedBookings
+        return scheduledBookings
           .filter(b => b.status === 'completed')
-          .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
+          .sort((a, b) => b.date!.localeCompare(a.date!) || (b.time ?? '').localeCompare(a.time ?? ''))
       case 'cancelled':
         return searchedBookings
           .filter(b => b.status === 'cancelled')
-          .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
+          .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || (b.time ?? '').localeCompare(a.time ?? ''))
       default: {
-        const upcoming = searchedBookings
-          .filter(b => b.status === 'confirmed' && b.date >= todayStr)
-          .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-        const past = searchedBookings
-          .filter(b => !(b.status === 'confirmed' && b.date >= todayStr))
-          .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
+        const upcoming = scheduledBookings
+          .filter(b => b.status === 'confirmed' && b.date! >= todayStr)
+          .sort((a, b) => a.date!.localeCompare(b.date!) || (a.time ?? '').localeCompare(b.time ?? ''))
+        const past = scheduledBookings
+          .filter(b => !(b.status === 'confirmed' && b.date! >= todayStr))
+          .sort((a, b) => b.date!.localeCompare(a.date!) || (b.time ?? '').localeCompare(a.time ?? ''))
         return [...upcoming, ...past]
       }
     }
@@ -125,24 +132,25 @@ export default function OrdersPage() {
     const result: { dateStr: string; bookings: BookingWithRelations[] }[] = []
     const seen = new Set<string>()
     for (const b of list) {
-      if (!seen.has(b.date)) {
-        seen.add(b.date)
-        result.push({ dateStr: b.date, bookings: list.filter(x => x.date === b.date) })
+      const d = b.date ?? ''
+      if (!seen.has(d)) {
+        seen.add(d)
+        result.push({ dateStr: d, bookings: list.filter(x => x.date === b.date) })
       }
     }
     return result
   }
 
   // For "all" tab: three sections
-  const upcomingBookings = searchedBookings
-    .filter(b => b.status === 'confirmed' && b.date >= todayStr)
-    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-  const unprocessedBookings = searchedBookings
-    .filter(b => b.status === 'confirmed' && b.date < todayStr)
-    .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
-  const historyBookings = searchedBookings
+  const upcomingBookings = scheduledBookings
+    .filter(b => b.status === 'confirmed' && b.date! >= todayStr)
+    .sort((a, b) => a.date!.localeCompare(b.date!) || (a.time ?? '').localeCompare(b.time ?? ''))
+  const unprocessedBookings = scheduledBookings
+    .filter(b => b.status === 'confirmed' && b.date! < todayStr)
+    .sort((a, b) => b.date!.localeCompare(a.date!) || (b.time ?? '').localeCompare(a.time ?? ''))
+  const historyBookings = scheduledBookings
     .filter(b => b.status !== 'confirmed')
-    .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
+    .sort((a, b) => b.date!.localeCompare(a.date!) || (b.time ?? '').localeCompare(a.time ?? ''))
 
   const upcomingGrouped = groupByDate(upcomingBookings)
   const unprocessedGrouped = groupByDate(unprocessedBookings)
@@ -166,7 +174,7 @@ export default function OrdersPage() {
 
   const tabCounts = {
     all: allBookings.length,
-    upcoming: allBookings.filter(b => b.status === 'confirmed' && b.date >= todayStr).length,
+    upcoming: allBookings.filter(b => b.status === 'confirmed' && !!b.date && b.date >= todayStr).length,
     completed: allBookings.filter(b => b.status === 'completed').length,
     cancelled: allBookings.filter(b => b.status === 'cancelled').length,
     packages: allPurchases.length,
@@ -308,6 +316,46 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="px-4 pt-3">
+            {/* Belum Dijadwalkan */}
+            {tab === 'all' && unscheduledBookings.length > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-bold text-orange-500 uppercase tracking-wide">Belum Dijadwalkan</span>
+                  <div className="flex-1 h-px bg-orange-100" />
+                  <span className="text-xs text-orange-400">{unscheduledBookings.length} pesanan</span>
+                </div>
+                <div className="space-y-2">
+                  {unscheduledBookings.map(booking => {
+                    const svcList = booking.services?.length ? booking.services : booking.service ? [booking.service] : []
+                    const total = booking.custom_price ?? (svcList.length ? svcList.reduce((s, x) => s + x.price, 0) : null)
+                    return (
+                      <div
+                        key={booking.id}
+                        onClick={() => router.push(`/bookings/${booking.id}`)}
+                        className="flex items-center gap-3 p-3.5 rounded-2xl border border-orange-200 bg-orange-50 active:bg-orange-100 cursor-pointer"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{booking.customer?.name}</p>
+                          <p className="text-xs text-gray-500 mt-0.5 truncate">
+                            {svcList.length ? svcList.map(s => s.name).join(', ') : 'Layanan dihapus'}
+                          </p>
+                          {total && <p className="text-xs font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(total)}</p>}
+                        </div>
+                        <span className="flex-shrink-0 text-xs font-semibold text-orange-500 bg-white border border-orange-200 px-2.5 py-1 rounded-full">
+                          Atur Jadwal
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {tab === 'all' && upcomingGrouped.length > 0 && (
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-bold text-[#2D5A3D] uppercase tracking-wide">Mendatang</span>
@@ -333,10 +381,10 @@ export default function OrdersPage() {
                         className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-gray-100 active:bg-gray-50 cursor-pointer"
                       >
                         <div className="w-12 flex-shrink-0 text-center">
-                          <span className="text-sm font-bold text-[#2D5A3D]">{booking.time.slice(0, 5)}</span>
-                          {(() => {
+                          <span className="text-sm font-bold text-[#2D5A3D]">{booking.time?.slice(0, 5) ?? '—'}</span>
+                          {booking.time && (() => {
                             const dur = booking.duration_minutes ?? 60
-                            const [h, m] = booking.time.slice(0, 5).split(':').map(Number)
+                            const [h, m] = booking.time!.slice(0, 5).split(':').map(Number)
                             const end = h * 60 + m + dur
                             return <span className="block text-[10px] text-gray-400">{String(Math.floor(end / 60)).padStart(2, '0')}:{String(end % 60).padStart(2, '0')}</span>
                           })()}
@@ -368,7 +416,7 @@ export default function OrdersPage() {
                         </div>
                         {booking.status === 'confirmed' ? (
                           <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {tab === 'upcoming' && (booking.date > todayStr || (booking.date === todayStr && booking.time.slice(0, 5) >= nowTimeStr)) && (
+                            {tab === 'upcoming' && booking.date && (booking.date > todayStr || (booking.date === todayStr && (booking.time?.slice(0, 5) ?? '') >= nowTimeStr)) && (
                               <a
                                 href={`https://wa.me/${(booking.customer?.phone ?? '').replace(/^0/, '62').replace(/[^0-9]/g, '')}?text=${buildReminderMsg(booking)}`}
                                 target="_blank"
@@ -432,7 +480,7 @@ export default function OrdersPage() {
                             className="flex items-center gap-3 p-3.5 rounded-2xl border border-orange-200 bg-orange-50 active:bg-orange-100 cursor-pointer"
                           >
                             <div className="w-12 flex-shrink-0 text-center">
-                              <span className="text-sm font-bold text-orange-500">{booking.time.slice(0, 5)}</span>
+                              <span className="text-sm font-bold text-orange-500">{booking.time?.slice(0, 5) ?? '—'}</span>
                             </div>
                             <div className="w-px h-10 bg-orange-200 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
@@ -496,10 +544,10 @@ export default function OrdersPage() {
                             className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-gray-100 active:bg-gray-50 cursor-pointer"
                           >
                             <div className="w-12 flex-shrink-0 text-center">
-                              <span className="text-sm font-bold text-gray-400">{booking.time.slice(0, 5)}</span>
-                              {(() => {
+                              <span className="text-sm font-bold text-gray-400">{booking.time?.slice(0, 5) ?? '—'}</span>
+                              {booking.time && (() => {
                                 const dur = booking.duration_minutes ?? 60
-                                const [h, m] = booking.time.slice(0, 5).split(':').map(Number)
+                                const [h, m] = booking.time!.slice(0, 5).split(':').map(Number)
                                 const end = h * 60 + m + dur
                                 return <span className="block text-[10px] text-gray-300">{String(Math.floor(end / 60)).padStart(2, '0')}:{String(end % 60).padStart(2, '0')}</span>
                               })()}

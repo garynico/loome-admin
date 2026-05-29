@@ -51,8 +51,8 @@ export async function POST(req: NextRequest) {
   const { customer_id, service_ids, date, time, duration_minutes, notes, custom_price, dp_amount } = body
 
   const ids: string[] = Array.isArray(service_ids) && service_ids.length > 0 ? service_ids : []
-  if (!customer_id || ids.length === 0 || !date || !time) {
-    return NextResponse.json({ error: 'customer_id, at least one service, date and time are required' }, { status: 400 })
+  if (!customer_id || ids.length === 0) {
+    return NextResponse.json({ error: 'customer_id and at least one service are required' }, { status: 400 })
   }
 
   const { customer_package_id } = body
@@ -63,8 +63,8 @@ export async function POST(req: NextRequest) {
       customer_id,
       service_id: ids[0],
       service_ids: ids,
-      date,
-      time,
+      date: date || null,
+      time: time || null,
       duration_minutes: duration_minutes || null,
       notes: notes || null,
       custom_price: custom_price ?? null,

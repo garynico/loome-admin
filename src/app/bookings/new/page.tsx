@@ -62,6 +62,7 @@ function NewBookingForm() {
   const [hasDp, setHasDp] = useState(false)
   const [dpRaw, setDpRaw] = useState('')
 
+  const [scheduleNow, setScheduleNow] = useState(true)
   const [date, setDate] = useState(preDate)
   const [time, setTime] = useState(preTime)
   const [endTime, setEndTime] = useState(preEndTime ?? '')
@@ -74,7 +75,7 @@ function NewBookingForm() {
   const [error, setError] = useState('')
   const [savedBooking, setSavedBooking] = useState<{
     id: string; customerName: string; customerPhone: string
-    serviceNames: string[]; totalPrice: number; date: string; time: string
+    serviceNames: string[]; totalPrice: number; date: string | null; time: string | null
   } | null>(null)
 
   const selectedServices = services.filter(s => serviceIds.includes(s.id))
@@ -185,9 +186,9 @@ function NewBookingForm() {
       body: JSON.stringify({
         customer_id: customerId,
         service_ids: serviceIds,
-        date,
-        time,
-        duration_minutes: calcDuration(time, endTime),
+        date: scheduleNow ? date : null,
+        time: scheduleNow ? time : null,
+        duration_minutes: scheduleNow ? calcDuration(time, endTime) : null,
         notes,
         custom_price: displayTotal,
         dp_amount: hasDp && Number(dpRaw) > 0 ? Number(dpRaw) : 0,
@@ -215,15 +216,15 @@ function NewBookingForm() {
 
   if (savedBooking) {
     const waPhone = savedBooking.customerPhone.replace(/^0/, '62').replace(/[^0-9]/g, '')
-    const dateFormatted = format(parseISO(savedBooking.date), 'EEEE, d MMMM yyyy', { locale: id })
+    const dateFormatted = savedBooking.date ? format(parseISO(savedBooking.date), 'EEEE, d MMMM yyyy', { locale: id }) : null
     const svcLine = savedBooking.serviceNames.map(n => `• ${n}`).join('\n')
     const waMsg = encodeURIComponent(
       `Halo ${savedBooking.customerName},\n\n` +
       `Berikut konfirmasi janji Anda di Loome Hair Removal:\n\n` +
       `📋 Layanan: ${savedBooking.serviceNames.join(', ')}\n` +
-      `📅 Tanggal: ${dateFormatted}\n` +
-      `⏰ Waktu: ${savedBooking.time.slice(0, 5)}\n\n` +
-      `Lokasi:\n📍Loome Hair Removal\nhttps://maps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
+      (dateFormatted ? `📅 Tanggal: ${dateFormatted}\n` : '') +
+      (savedBooking.time ? `⏰ Waktu: ${savedBooking.time.slice(0, 5)}\n` : '') +
+      `\nLokasi:\n📍Loome Hair Removal\nhttps://maps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
       `Ditunggu kedatangannya! 💚`
     )
 
@@ -242,7 +243,10 @@ function NewBookingForm() {
             <p className="text-xl font-bold text-gray-900">{savedBooking.customerName}</p>
             <p className="text-sm text-gray-500 mt-1">{savedBooking.serviceNames.join(', ')}</p>
             <p className="text-sm font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(savedBooking.totalPrice)}</p>
-            <p className="text-sm text-[#2D5A3D] mt-0.5">{dateFormatted} · {savedBooking.time.slice(0, 5)}</p>
+            {dateFormatted && savedBooking.time
+              ? <p className="text-sm text-[#2D5A3D] mt-0.5">{dateFormatted} · {savedBooking.time.slice(0, 5)}</p>
+              : <p className="text-sm text-orange-500 mt-0.5">Jadwal belum ditetapkan</p>
+            }
           </div>
           <div className="w-full space-y-3">
             <a
@@ -256,12 +260,21 @@ function NewBookingForm() {
               </svg>
               Kirim Konfirmasi WhatsApp
             </a>
-            <button
-              onClick={() => router.push(`/calendar?date=${savedBooking.date}`)}
-              className="w-full py-3.5 rounded-xl border border-gray-200 text-gray-700 font-semibold text-base active:bg-gray-50"
-            >
-              Kembali ke Kalender
-            </button>
+            {savedBooking.date ? (
+              <button
+                onClick={() => router.push(`/calendar?date=${savedBooking.date}`)}
+                className="w-full py-3.5 rounded-xl border border-gray-200 text-gray-700 font-semibold text-base active:bg-gray-50"
+              >
+                Kembali ke Kalender
+              </button>
+            ) : (
+              <button
+                onClick={() => router.push('/orders')}
+                className="w-full py-3.5 rounded-xl border border-gray-200 text-gray-700 font-semibold text-base active:bg-gray-50"
+              >
+                Lihat di Pesanan
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -561,7 +574,33 @@ function NewBookingForm() {
 
           {/* Date & Time */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Tanggal &amp; Waktu</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-sm font-medium text-gray-700">Tanggal &amp; Waktu</label>
+              <button
+                type="button"
+                onClick={() => setScheduleNow(v => !v)}
+                className="flex items-center gap-1.5 text-xs text-gray-500"
+              >
+                <div
+                  className="w-8 h-5 rounded-full relative transition-colors flex-shrink-0"
+                  style={{ background: scheduleNow ? '#2D5A3D' : '#d1d5db' }}
+                >
+                  <div
+                    className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all"
+                    style={{ left: scheduleNow ? '14px' : '2px' }}
+                  />
+                </div>
+                Jadwalkan nanti
+              </button>
+            </div>
+            {!scheduleNow ? (
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-orange-50 border border-orange-200">
+                <svg className="w-5 h-5 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-sm text-orange-600 font-medium">Jadwal akan ditetapkan nanti</p>
+              </div>
+            ) : (
             <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[#E8F0EA]">
               <svg className="w-5 h-5 text-[#2D5A3D] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -581,6 +620,7 @@ function NewBookingForm() {
                 className="text-xs text-[#2D5A3D] font-medium"
               >Ubah</button>
             </div>
+            )}
           </div>
 
           {/* Notes */}

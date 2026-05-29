@@ -91,7 +91,7 @@ export default function DashboardPage() {
   // Revenue helper per month
   function monthRevenue(m: string) {
     const bookingRev = bookings
-      .filter(b => b.status === 'completed' && b.date.startsWith(m))
+      .filter(b => b.status === 'completed' && b.date?.startsWith(m))
       .reduce((sum, b) => sum + bookingTotal(b), 0)
     const pkgRev = pkgPurchases
       .filter(p => p.purchased_at.startsWith(m))
@@ -108,9 +108,9 @@ export default function DashboardPage() {
 
   // Selected month metrics
   const metrics = useMemo(() => {
-    const completed = bookings.filter(b => b.status === 'completed' && b.date.startsWith(selectedMonth))
-    const confirmed = bookings.filter(b => b.status === 'confirmed' && b.date.startsWith(selectedMonth))
-    const cancelled = bookings.filter(b => b.status === 'cancelled' && b.date.startsWith(selectedMonth))
+    const completed = bookings.filter(b => b.status === 'completed' && b.date?.startsWith(selectedMonth))
+    const confirmed = bookings.filter(b => b.status === 'confirmed' && b.date?.startsWith(selectedMonth))
+    const cancelled = bookings.filter(b => b.status === 'cancelled' && b.date?.startsWith(selectedMonth))
     const monthPkgs = pkgPurchases.filter(p => p.purchased_at.startsWith(selectedMonth))
 
     const bookingRev = completed.reduce((sum, b) => sum + bookingTotal(b), 0)

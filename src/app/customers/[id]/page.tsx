@@ -104,10 +104,10 @@ export default function CustomerProfilePage() {
   const topService = Object.entries(serviceCount).sort((a, b) => b[1] - a[1])[0]?.[0]
 
   const todayStr = format(new Date(), 'yyyy-MM-dd')
-  const upcomingBookings = bookings.filter(b => b.status === 'confirmed' && b.date >= todayStr)
+  const upcomingBookings = bookings.filter(b => b.status === 'confirmed' && !!b.date && b.date >= todayStr)
   const nextBooking = upcomingBookings
     .slice()
-    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))[0]
+    .sort((a, b) => a.date!.localeCompare(b.date!) || (a.time ?? '').localeCompare(b.time ?? ''))[0]
 
   function startEdit() {
     if (!customer) return
@@ -192,8 +192,9 @@ export default function CustomerProfilePage() {
     `Halo ${customer.name},\n` +
     `Kami ingin mengingatkan jadwal treatment kakak pada:\n\n` +
     `📋 Layanan: ${nextBookingSvcNames}\n` +
-    `📅 Tanggal: ${format(parseISO(nextBooking.date), 'EEEE, d MMMM yyyy', { locale: id })}\n` +
-    `⏰ Waktu: ${nextBooking.time.slice(0, 5)}\n\n` +
+    (nextBooking.date ? `📅 Tanggal: ${format(parseISO(nextBooking.date), 'EEEE, d MMMM yyyy', { locale: id })}\n` : '') +
+    (nextBooking.time ? `⏰ Waktu: ${nextBooking.time.slice(0, 5)}\n` : '') +
+    `\n` +
     `Lokasi:\n📍Loome Hair Removal\nhttps://maps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
     `Mohon dibantu konfirmasi dengan memilih salah satu jawaban: Hadir, Batal, Reschedule.\n` +
     `Terimakasih banyak kak! 💚`
@@ -280,7 +281,7 @@ export default function CustomerProfilePage() {
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-[#2D5A3D]">Janji mendatang</p>
                 <p className="text-xs text-[#2D5A3D] truncate">
-                  {format(parseISO(nextBooking.date), 'd MMM yyyy', { locale: id })} · {nextBooking.time.slice(0, 5)} · {nextBooking.services?.length ? nextBooking.services.map(s => s.name).join(', ') : nextBooking.service?.name}
+                  {nextBooking.date ? format(parseISO(nextBooking.date), 'd MMM yyyy', { locale: id }) : 'Jadwal TBD'}{nextBooking.time ? ` · ${nextBooking.time.slice(0, 5)}` : ''} · {nextBooking.services?.length ? nextBooking.services.map(s => s.name).join(', ') : nextBooking.service?.name}
                 </p>
               </div>
             </div>
@@ -409,20 +410,26 @@ export default function CustomerProfilePage() {
                   className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 active:bg-gray-50 text-left"
                 >
                   <div className="flex flex-col items-center w-10 flex-shrink-0">
-                    <span className="text-[11px] font-bold text-[#2D5A3D]">
-                      {format(parseISO(b.date), 'MMM', { locale: id }).toUpperCase()}
-                    </span>
-                    <span className="text-lg font-bold text-gray-900 leading-none">
-                      {format(parseISO(b.date), 'd')}
-                    </span>
-                    <span className="text-[10px] text-gray-400">
-                      {format(parseISO(b.date), 'yyyy')}
-                    </span>
+                    {b.date ? (
+                      <>
+                        <span className="text-[11px] font-bold text-[#2D5A3D]">
+                          {format(parseISO(b.date), 'MMM', { locale: id }).toUpperCase()}
+                        </span>
+                        <span className="text-lg font-bold text-gray-900 leading-none">
+                          {format(parseISO(b.date), 'd')}
+                        </span>
+                        <span className="text-[10px] text-gray-400">
+                          {format(parseISO(b.date), 'yyyy')}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-[10px] font-semibold text-orange-400 text-center leading-tight">TBD</span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">{b.service?.name ?? 'Layanan dihapus'}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {b.time.slice(0, 5)}
+                      {b.time?.slice(0, 5) ?? 'Jadwal TBD'}
                       {b.service?.price ? ` · ${formatPrice(b.service.price)}` : ''}
                     </p>
                   </div>

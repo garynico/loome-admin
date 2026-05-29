@@ -65,10 +65,11 @@ export default function BookingDetailPage() {
 
   function openReschedule() {
     if (!booking) return
-    setRsDate(booking.date)
-    setRsStartTime(booking.time.slice(0, 5))
-    if (booking.duration_minutes) {
-      const [h, m] = booking.time.slice(0, 5).split(':').map(Number)
+    setRsDate(booking.date ?? format(new Date(), 'yyyy-MM-dd'))
+    const startTime = booking.time?.slice(0, 5) ?? '09:00'
+    setRsStartTime(startTime)
+    if (booking.duration_minutes && booking.time) {
+      const [h, m] = startTime.split(':').map(Number)
       const endTotal = h * 60 + m + booking.duration_minutes
       setRsEndTime(`${String(Math.floor(endTotal / 60)).padStart(2, '0')}:${String(endTotal % 60).padStart(2, '0')}`)
     } else {
@@ -140,7 +141,7 @@ export default function BookingDetailPage() {
   }
 
   const waPhone = (booking.customer?.phone ?? '').replace(/^0/, '62').replace(/[^0-9]/g, '')
-  const dateFormatted = format(parseISO(booking.date), 'EEEE, d MMMM yyyy', { locale: id })
+  const dateFormatted = booking.date ? format(parseISO(booking.date), 'EEEE, d MMMM yyyy', { locale: id }) : null
   const svcList = booking.services?.length ? booking.services : booking.service ? [booking.service] : []
   const svcLine = svcList.map(s => `• ${s.name}`).join('\n') || 'Layanan'
   const totalPrice = booking.custom_price ?? svcList.reduce((s, x) => s + x.price, 0)
@@ -150,18 +151,18 @@ export default function BookingDetailPage() {
     `Halo ${booking.customer?.name},\n\n` +
     `Berikut konfirmasi janji Anda di Loome Hair Removal:\n\n` +
     `📋 Layanan: ${svcNames}\n` +
-    `📅 Tanggal: ${dateFormatted}\n` +
-    `⏰ Waktu: ${booking.time.slice(0, 5)}\n\n` +
-    `${locationBlock}\n\n` +
+    (dateFormatted ? `📅 Tanggal: ${dateFormatted}\n` : '') +
+    (booking.time ? `⏰ Waktu: ${booking.time.slice(0, 5)}\n` : '') +
+    `\n${locationBlock}\n\n` +
     `Ditunggu kedatangannya! 💚`
   )
   const waReminderMsg = encodeURIComponent(
     `Halo ${booking.customer?.name},\n` +
     `Kami ingin mengingatkan jadwal treatment kakak pada:\n\n` +
     `📋 Layanan: ${svcNames}\n` +
-    `📅 Tanggal: ${dateFormatted}\n` +
-    `⏰ Waktu: ${booking.time.slice(0, 5)}\n\n` +
-    `${locationBlock}\n\n` +
+    (dateFormatted ? `📅 Tanggal: ${dateFormatted}\n` : '') +
+    (booking.time ? `⏰ Waktu: ${booking.time.slice(0, 5)}\n` : '') +
+    `\n${locationBlock}\n\n` +
     `Mohon dibantu konfirmasi dengan memilih salah satu jawaban: Hadir, Batal, Reschedule.\n` +
     `Terimakasih banyak kak! 💚`
   )
@@ -281,10 +282,21 @@ export default function BookingDetailPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-xs text-gray-500">Tanggal & Waktu</p>
-                <p className="text-sm font-semibold text-gray-900">{dateFormatted}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{booking.time.slice(0, 5)}</p>
+                {dateFormatted && booking.time ? (
+                  <>
+                    <p className="text-sm font-semibold text-gray-900">{dateFormatted}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{booking.time.slice(0, 5)}</p>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-orange-500">Belum dijadwalkan</p>
+                    <button onClick={openReschedule} className="text-xs font-semibold text-[#2D5A3D] active:opacity-70">
+                      Atur Jadwal
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -334,7 +346,7 @@ export default function BookingDetailPage() {
               onClick={openReschedule}
               className="w-full py-3 rounded-xl border border-[#2D5A3D] text-[#2D5A3D] text-sm font-semibold active:bg-[#E8F0EA]"
             >
-              Jadwalkan Ulang
+              {booking.date ? 'Jadwalkan Ulang' : 'Atur Jadwal'}
             </button>
           )}
 
@@ -390,7 +402,7 @@ export default function BookingDetailPage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowReschedule(false)} />
           <div className="relative bg-white rounded-t-3xl px-4 pt-5 pb-8 space-y-4">
             <div className="flex items-center justify-between mb-1">
-              <h2 className="text-base font-bold text-gray-900">Jadwalkan Ulang</h2>
+              <h2 className="text-base font-bold text-gray-900">{booking.date ? 'Jadwalkan Ulang' : 'Atur Jadwal'}</h2>
               <button onClick={() => setShowReschedule(false)} className="p-1 text-gray-400">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
