@@ -38,6 +38,7 @@ export default function BookingDetailPage() {
   const [showEditServices, setShowEditServices] = useState(false)
   const [allServices, setAllServices] = useState<Service[]>([])
   const [editServiceIds, setEditServiceIds] = useState<string[]>([])
+  const [editCoveredServiceId, setEditCoveredServiceId] = useState<string | null>(null)
   const [savingServices, setSavingServices] = useState(false)
 
   useEffect(() => {
@@ -103,9 +104,16 @@ export default function BookingDetailPage() {
   async function openEditServices() {
     const current = (booking?.services?.length ? booking.services : booking?.service ? [booking.service] : []).map(s => s.id)
     setEditServiceIds(current)
-    if (allServices.length === 0) {
-      const res = await fetch('/api/services')
-      if (res.ok) setAllServices(await res.json())
+    const [svcRes, pkgRes] = await Promise.all([
+      allServices.length === 0 ? fetch('/api/services') : Promise.resolve(null),
+      booking?.customer_package_id ? fetch(`/api/customer-packages/${booking.customer_package_id}`) : Promise.resolve(null),
+    ])
+    if (svcRes?.ok) setAllServices(await svcRes.json())
+    if (pkgRes?.ok) {
+      const pkg = await pkgRes.json()
+      setEditCoveredServiceId(pkg.service_id ?? null)
+    } else {
+      setEditCoveredServiceId(null)
     }
     setShowEditServices(true)
   }
@@ -113,7 +121,9 @@ export default function BookingDetailPage() {
   async function saveEditServices() {
     if (editServiceIds.length === 0) return
     setSavingServices(true)
-    const newTotal = allServices.filter(s => editServiceIds.includes(s.id)).reduce((sum, s) => sum + s.price, 0)
+    const newTotal = allServices
+      .filter(s => editServiceIds.includes(s.id))
+      .reduce((sum, s) => sum + (s.id === editCoveredServiceId ? 0 : s.price), 0)
     const res = await fetch(`/api/bookings/${bookingId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -211,7 +221,7 @@ export default function BookingDetailPage() {
             className="w-full flex items-center gap-3 p-4 rounded-2xl border border-gray-100 active:bg-gray-50 text-left"
           >
             <div className="w-12 h-12 rounded-full bg-[#E8F0EA] flex items-center justify-center flex-shrink-0">
-              <span className="text-lg font-bold text-[#2D5A3D]">{booking.customer?.name.charAt(0).toUpperCase()}</span>
+              <span className="text-lg font-bold text-[#2D5A3D]">{booking.customer?.name?.charAt(0)?.toUpperCase() ?? '?'}</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-base font-bold text-gray-900">{booking.customer?.name}</p>
@@ -487,7 +497,10 @@ export default function BookingDetailPage() {
                       {selected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                     </div>
                     <span className="text-sm font-semibold text-gray-900 flex-1">{s.name}</span>
-                    <span className="text-sm font-semibold" style={{ color: selected ? '#2D5A3D' : '#6b7280' }}>{formatPrice(s.price)}</span>
+                    {s.id === editCoveredServiceId
+                      ? <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">GRATIS</span>
+                      : <span className="text-sm font-semibold" style={{ color: selected ? '#2D5A3D' : '#6b7280' }}>{formatPrice(s.price)}</span>
+                    }
                   </button>
                 )
               })}
@@ -496,7 +509,7 @@ export default function BookingDetailPage() {
               <div className="flex justify-between items-center px-1 mb-3">
                 <span className="text-sm text-gray-500">Total baru</span>
                 <span className="text-base font-bold text-[#2D5A3D]">
-                  {formatPrice(allServices.filter(s => editServiceIds.includes(s.id)).reduce((sum, s) => sum + s.price, 0))}
+                  {formatPrice(allServices.filter(s => editServiceIds.includes(s.id)).reduce((sum, s) => sum + (s.id === editCoveredServiceId ? 0 : s.price), 0))}
                 </span>
               </div>
             )}

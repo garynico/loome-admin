@@ -430,7 +430,7 @@ export default function CustomerProfilePage() {
                     <p className="text-sm font-semibold text-gray-900 truncate">{b.service?.name ?? 'Layanan dihapus'}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {b.time?.slice(0, 5) ?? 'Jadwal TBD'}
-                      {b.service?.price ? ` · ${formatPrice(b.service.price)}` : ''}
+                      {b.custom_price != null ? ` · ${formatPrice(b.custom_price)}` : b.service?.price ? ` · ${formatPrice(b.service.price)}` : ''}
                     </p>
                   </div>
                   <span
