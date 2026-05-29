@@ -8,7 +8,7 @@ import type { BookingWithRelations, CustomerPackage } from '@/types'
 import BottomNav from '@/components/BottomNav'
 import Image from 'next/image'
 
-type Tab = 'all' | 'upcoming' | 'completed' | 'cancelled' | 'packages'
+type Tab = 'all' | 'upcoming' | 'unscheduled' | 'completed' | 'cancelled' | 'packages'
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price)
@@ -167,6 +167,7 @@ export default function OrdersPage() {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'all', label: 'Semua' },
     { key: 'upcoming', label: 'Mendatang' },
+    { key: 'unscheduled', label: 'Belum Jadwal' },
     { key: 'completed', label: 'Selesai' },
     { key: 'cancelled', label: 'Batal' },
     { key: 'packages', label: 'Paket' },
@@ -175,6 +176,7 @@ export default function OrdersPage() {
   const tabCounts = {
     all: allBookings.length,
     upcoming: allBookings.filter(b => b.status === 'confirmed' && !!b.date && b.date >= todayStr).length,
+    unscheduled: allBookings.filter(b => !b.date && b.status !== 'cancelled').length,
     completed: allBookings.filter(b => b.status === 'completed').length,
     cancelled: allBookings.filter(b => b.status === 'cancelled').length,
     packages: allPurchases.length,
@@ -307,18 +309,17 @@ export default function OrdersPage() {
               </>
             )}
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center py-20 text-gray-400 gap-3">
-            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-            <p className="text-sm">Belum ada pesanan</p>
-          </div>
-        ) : (
+        ) : tab === 'unscheduled' ? (
           <div className="px-4 pt-3">
-            {/* Belum Dijadwalkan */}
-            {tab === 'all' && unscheduledBookings.length > 0 && (
-              <div className="mb-4">
+            {unscheduledBookings.length === 0 ? (
+              <div className="flex flex-col items-center py-20 text-gray-400 gap-3">
+                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-sm">Semua pesanan sudah dijadwalkan</p>
+              </div>
+            ) : (
+              <>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs font-bold text-orange-500 uppercase tracking-wide">Belum Dijadwalkan</span>
                   <div className="flex-1 h-px bg-orange-100" />
@@ -353,9 +354,18 @@ export default function OrdersPage() {
                     )
                   })}
                 </div>
-              </div>
+              </>
             )}
-
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center py-20 text-gray-400 gap-3">
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+            <p className="text-sm">Belum ada pesanan</p>
+          </div>
+        ) : (
+          <div className="px-4 pt-3">
             {tab === 'all' && upcomingGrouped.length > 0 && (
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-bold text-[#2D5A3D] uppercase tracking-wide">Mendatang</span>
