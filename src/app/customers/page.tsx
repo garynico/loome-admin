@@ -60,7 +60,7 @@ export default function CustomersPage() {
   }, [tab, loadFollowups])
 
   function waFollowupLink(c: FollowupCustomer) {
-    const msg = `Halo ${c.name}! 👋\n\nSudah lama tidak bertemu ya! Kami kangen sama kamu di Loome Hair Removal 💚\n\nYuk jadwalkan sesi hair removal berikutnya! Hubungi kami untuk info lebih lanjut ya kak 😊`
+    const msg = `Halo ${c.name}! 👋\n\nSudah lama tidak bertemu ya! Kami tunggu kehadirannya lagi di Loome Hair Removal 💚\n\nYuk jadwalkan sesi hair removal berikutnya! Hubungi kami untuk info lebih lanjut ya kak 😊`
     return `https://wa.me/${formatPhone(c.phone)}?text=${encodeURIComponent(msg)}`
   }
 
