@@ -10,8 +10,13 @@ import BottomNav from '@/components/BottomNav'
 type Tab = 'all' | 'followup'
 
 interface FollowupCustomer extends Customer {
-  last_booking_date: string | null
+  last_booking_date: string
   last_service: string | null
+  last_price: number | null
+}
+
+function formatIDR(n: number) {
+  return 'Rp ' + n.toLocaleString('id-ID')
 }
 
 function formatPhone(phone: string) {
@@ -167,9 +172,7 @@ export default function CustomersPage() {
               </p>
               <ul>
                 {followups.map(c => {
-                  const days = c.last_booking_date
-                    ? differenceInDays(new Date(), parseISO(c.last_booking_date))
-                    : null
+                  const days = differenceInDays(new Date(), parseISO(c.last_booking_date))
                   return (
                     <li key={c.id} className="border-b border-gray-50">
                       <div className="flex items-center gap-3 px-4 py-3.5">
@@ -182,18 +185,12 @@ export default function CustomersPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-900 truncate">{c.name}</p>
-                            {c.last_booking_date ? (
-                              <>
-                                <p className="text-xs text-orange-500 font-medium mt-0.5">
-                                  {days} hari lalu · {format(parseISO(c.last_booking_date), 'd MMM yyyy', { locale: id })}
-                                </p>
-                                {c.last_service && (
-                                  <p className="text-xs text-gray-400 truncate mt-0.5">{c.last_service}</p>
-                                )}
-                              </>
-                            ) : (
-                              <p className="text-xs text-gray-400 mt-0.5">Belum pernah booking</p>
-                            )}
+                            <p className="text-xs text-orange-500 font-medium mt-0.5">
+                              {days} hari lalu · {format(parseISO(c.last_booking_date), 'd MMM yyyy', { locale: id })}
+                            </p>
+                            <p className="text-xs text-gray-400 truncate mt-0.5">
+                              {[c.last_service, c.last_price != null ? formatIDR(c.last_price) : null].filter(Boolean).join(' · ')}
+                            </p>
                           </div>
                         </button>
                         <a
