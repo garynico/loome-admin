@@ -166,31 +166,49 @@ function ServicesContent() {
               </button>
             </div>
           ) : (
-            <div className="px-4 py-4 space-y-3">
-              {packages.map(p => (
-                <div key={p.id} className="flex items-center gap-3 p-4 rounded-2xl border border-gray-100">
-                  <div className="w-10 h-10 rounded-xl bg-[#E8F0EA] flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#2D5A3D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
+            <div className="px-4 py-4">
+              {(['female', 'male', 'all'] as const).map(gender => {
+                const group = packages.filter(p => (p.gender_target ?? 'all') === gender)
+                if (group.length === 0) return null
+                const label = gender === 'female' ? '♀ Wanita' : gender === 'male' ? '♂ Pria' : '✦ Semua Gender'
+                const labelColor = gender === 'female' ? '#be185d' : gender === 'male' ? '#1d4ed8' : '#6b7280'
+                const lineColor = gender === 'female' ? '#fce7f3' : gender === 'male' ? '#eff6ff' : '#f3f4f6'
+                return (
+                  <div key={gender} className="mb-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xs font-bold uppercase tracking-wide" style={{ color: labelColor }}>{label}</span>
+                      <div className="flex-1 h-px" style={{ background: lineColor }} />
+                      <span className="text-xs text-gray-400">{group.length} paket</span>
+                    </div>
+                    <div className="space-y-3">
+                      {group.map(p => (
+                        <div key={p.id} className="flex items-center gap-3 p-4 rounded-2xl border border-gray-100">
+                          <div className="w-10 h-10 rounded-xl bg-[#E8F0EA] flex items-center justify-center flex-shrink-0">
+                            <svg className="w-5 h-5 text-[#2D5A3D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900">{p.name}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{p.service?.name ?? 'Semua layanan'} · {p.sessions}x</p>
+                            <p className="text-sm font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(p.price)}</p>
+                          </div>
+                          <button onClick={() => router.push(`/packages/${p.id}/edit`)} className="p-2 text-gray-400 active:text-[#2D5A3D]">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button onClick={() => handleDeletePackage(p.id, p.name)} disabled={deletingPkg === p.id} className="p-2 text-gray-300 active:text-red-400">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900">{p.name}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{p.service?.name ?? 'Semua layanan'} · {p.sessions}x</p>
-                    <p className="text-sm font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(p.price)}</p>
-                  </div>
-                  <button onClick={() => router.push(`/packages/${p.id}/edit`)} className="p-2 text-gray-400 active:text-[#2D5A3D]">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  <button onClick={() => handleDeletePackage(p.id, p.name)} disabled={deletingPkg === p.id} className="p-2 text-gray-300 active:text-red-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )
         )}

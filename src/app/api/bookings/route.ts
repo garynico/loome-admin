@@ -76,20 +76,9 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Deduct one session from the package
+  // Atomically deduct one session from the package
   if (customer_package_id) {
-    const { data: cp } = await supabase
-      .from('customer_packages')
-      .select('sessions_used, sessions_total')
-      .eq('id', customer_package_id)
-      .single()
-    if (cp) {
-      const newUsed = cp.sessions_used + 1
-      await supabase.from('customer_packages').update({
-        sessions_used: newUsed,
-        status: newUsed >= cp.sessions_total ? 'completed' : 'active',
-      }).eq('id', customer_package_id)
-    }
+    await supabase.rpc('adjust_package_sessions', { pkg_id: customer_package_id, delta: 1 })
   }
 
   const [enriched] = await attachServices([data as Record<string, unknown>])

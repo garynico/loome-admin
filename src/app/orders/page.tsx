@@ -33,6 +33,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('all')
   const [riwayatExpanded, setRiwayatExpanded] = useState(false)
+  const [pkgHistoryExpanded, setPkgHistoryExpanded] = useState(false)
   const [search, setSearch] = useState('')
 
   async function handleLogout() {
@@ -43,6 +44,43 @@ export default function OrdersPage() {
   const todayStr = format(new Date(), 'yyyy-MM-dd')
   const tomorrowStr = format(addDays(new Date(), 1), 'yyyy-MM-dd')
   const nowTimeStr = format(new Date(), 'HH:mm')
+
+  async function cancelPackage(cpId: string, name: string) {
+    if (!confirm(`Batalkan paket "${name}"? Paket akan dikeluarkan dari revenue.`)) return
+    setAllPurchases(prev => prev.map(cp => cp.id === cpId ? { ...cp, status: 'cancelled' } : cp))
+    const res = await fetch(`/api/customer-packages/${cpId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled' }),
+    })
+    if (!res.ok) {
+      // Rollback optimistic update
+      setAllPurchases(prev => prev.map(cp => cp.id === cpId ? { ...cp, status: 'active' } : cp))
+      alert('Gagal membatalkan paket. Coba lagi.')
+    }
+  }
+
+  async function deletePackage(cpId: string, name: string) {
+    if (!confirm(`Hapus riwayat paket "${name}"? Data tidak bisa dikembalikan dan akan hilang dari revenue.`)) return
+    const snapshot = allPurchases.find(cp => cp.id === cpId)
+    setAllPurchases(prev => prev.filter(cp => cp.id !== cpId))
+    const res = await fetch(`/api/customer-packages/${cpId}`, { method: 'DELETE' })
+    if (!res.ok) {
+      if (snapshot) setAllPurchases(prev => [...prev, snapshot].sort((a, b) => b.purchased_at.localeCompare(a.purchased_at)))
+      alert('Gagal menghapus paket. Coba lagi.')
+    }
+  }
+
+  async function deleteBooking(bookingId: string, customerName: string) {
+    if (!confirm(`Hapus janji "${customerName}"? Data tidak bisa dikembalikan.`)) return
+    const snapshot = allBookings.find(b => b.id === bookingId)
+    setAllBookings(prev => prev.filter(b => b.id !== bookingId))
+    const res = await fetch(`/api/bookings/${bookingId}`, { method: 'DELETE' })
+    if (!res.ok) {
+      if (snapshot) setAllBookings(prev => [...prev, snapshot])
+      alert('Gagal menghapus janji. Coba lagi.')
+    }
+  }
 
   async function markCompleted(bookingId: string) {
     setAllBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'completed' } : b))
@@ -65,7 +103,7 @@ export default function OrdersPage() {
       (dateStr ? `📅 Tanggal: ${dateStr}\n` : '') +
       (booking.time ? `⏰ Waktu: ${booking.time.slice(0, 5)}\n` : '') +
       `\n` +
-      `Lokasi:\n📍Loome Hair Removal\nhttps://maps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
+      `Lokasi:\n📍Loome Hair Removal\nmaps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
       `Mohon dibantu konfirmasi dengan memilih salah satu jawaban: Hadir, Batal, Reschedule.\n` +
       `Terimakasih banyak kak! 💚`
     )
@@ -158,6 +196,7 @@ export default function OrdersPage() {
   const grouped = groupByDate(filtered)
 
   function formatDateLabel(dateStr: string) {
+    if (!dateStr) return 'Tanpa Jadwal'
     const d = parseISO(dateStr)
     if (isToday(d)) return `Hari ini · ${format(d, 'd MMMM yyyy', { locale: id })}`
     if (isTomorrow(d)) return `Besok · ${format(d, 'd MMMM yyyy', { locale: id })}`
@@ -252,7 +291,7 @@ export default function OrdersPage() {
             <div className="w-5 h-5 rounded-full border-2 border-[#2D5A3D] border-t-transparent animate-spin" />
           </div>
         ) : tab === 'packages' ? (
-          <div className="px-4 pt-3">
+          <div className="px-4 pt-3 pb-4">
             {allPurchases.length === 0 ? (
               <div className="flex flex-col items-center py-20 text-gray-400 gap-3">
                 <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,55 +299,138 @@ export default function OrdersPage() {
                 </svg>
                 <p className="text-sm">Belum ada pembelian paket</p>
               </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xs font-bold text-[#2D5A3D] uppercase tracking-wide">Pembelian Paket</span>
-                  <div className="flex-1 h-px bg-[#E8F0EA]" />
-                  <span className="text-xs text-gray-400">{allPurchases.length} paket</span>
-                </div>
-                <div className="space-y-2">
-                  {allPurchases
-                    .slice()
-                    .sort((a, b) => b.purchased_at.localeCompare(a.purchased_at))
-                    .map(cp => (
-                      <div
-                        key={cp.id}
-                        onClick={() => router.push(`/customers/${cp.customer_id}`)}
-                        className="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-100 active:bg-gray-50 cursor-pointer"
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-[#E8F0EA] flex items-center justify-center flex-shrink-0">
-                          <svg className="w-5 h-5 text-[#2D5A3D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{cp.customer?.name ?? '—'}</p>
-                          <p className="text-xs text-gray-500 mt-0.5 truncate">
-                            {cp.package_name} · {cp.sessions_total}x sesi
-                          </p>
-                          <p className="text-xs font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(cp.paid_price)}</p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <span
-                            className="text-[10px] font-semibold px-2 py-1 rounded-full"
-                            style={{
-                              background: cp.status === 'active' ? '#E8F0EA' : '#f3f4f6',
-                              color: cp.status === 'active' ? '#2D5A3D' : '#9ca3af',
-                            }}
+            ) : (() => {
+              const unused = allPurchases.filter(cp => cp.status === 'active' && cp.sessions_used === 0).sort((a, b) => b.purchased_at.localeCompare(a.purchased_at))
+              const inProgress = allPurchases.filter(cp => cp.status === 'active' && cp.sessions_used > 0).sort((a, b) => (a.sessions_total - a.sessions_used) - (b.sessions_total - b.sessions_used))
+              const history = allPurchases.filter(cp => cp.status !== 'active').sort((a, b) => b.purchased_at.localeCompare(a.purchased_at))
+
+              const PkgCard = ({ cp }: { cp: CustomerPackage }) => {
+                const remaining = cp.sessions_total - cp.sessions_used
+                const pct = cp.sessions_total > 0 ? (cp.sessions_used / cp.sessions_total) * 100 : 0
+                return (
+                  <div
+                    key={cp.id}
+                    onClick={() => router.push(`/customers/${cp.customer_id}`)}
+                    className="p-4 rounded-2xl border cursor-pointer active:opacity-80"
+                    style={{ borderColor: cp.status === 'cancelled' ? '#fecaca' : cp.status === 'completed' ? '#e5e7eb' : '#d1fae5' }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900 truncate">{cp.customer?.name ?? '—'}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">{cp.package_name}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: cp.status === 'active' ? '#dcfce7' : cp.status === 'cancelled' ? '#fee2e2' : '#f3f4f6',
+                            color: cp.status === 'active' ? '#16a34a' : cp.status === 'cancelled' ? '#ef4444' : '#9ca3af',
+                          }}>
+                          {cp.status === 'active' ? (cp.sessions_used === 0 ? 'Belum Dipakai' : 'Aktif') : cp.status === 'cancelled' ? 'Dibatalkan' : 'Selesai'}
+                        </span>
+                        {cp.status === 'active' && cp.sessions_used === 0 && (
+                          <button
+                            onClick={e => { e.stopPropagation(); cancelPackage(cp.id, cp.package_name) }}
+                            className="text-[10px] text-red-400 font-medium active:text-red-600"
                           >
-                            {cp.status === 'active' ? 'Aktif' : 'Selesai'}
+                            Batalkan
+                          </button>
+                        )}
+                        {cp.status !== 'active' && (
+                          <button
+                            onClick={e => { e.stopPropagation(); deletePackage(cp.id, cp.package_name) }}
+                            className="text-[10px] text-red-400 font-medium active:text-red-600"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {cp.status !== 'cancelled' && (
+                      <div className="mt-3">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[11px] text-gray-400">{cp.sessions_used} dari {cp.sessions_total} sesi</span>
+                          <span className="text-[11px] font-bold" style={{ color: remaining > 0 ? '#2D5A3D' : '#9ca3af' }}>
+                            {remaining} tersisa
                           </span>
-                          <p className="text-[10px] text-gray-400 mt-1">
-                            {format(parseISO(cp.purchased_at.slice(0, 10)), 'd MMM yyyy', { locale: id })}
-                          </p>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                          <div className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${pct}%`,
+                              background: cp.status === 'completed' ? '#9ca3af' : pct >= 80 ? '#f97316' : '#2D5A3D',
+                            }} />
                         </div>
                       </div>
-                    ))}
-                </div>
-              </>
-            )}
-          </div>
+                    )}
+
+                    <div className="flex items-center justify-between mt-2.5">
+                      <p className={`text-xs font-semibold ${cp.status === 'cancelled' ? 'line-through text-gray-400' : 'text-[#2D5A3D]'}`}>
+                        {formatPrice(cp.paid_price)}
+                      </p>
+                      <p className="text-[11px] text-gray-400">
+                        {cp.status !== 'active'
+                          ? format(parseISO(cp.purchased_at.slice(0, 10)), 'd MMM yyyy', { locale: id })
+                          : cp.last_booking_date
+                            ? `Terakhir ${format(parseISO(cp.last_booking_date), 'd MMM yyyy', { locale: id })}`
+                            : `Beli ${format(parseISO(cp.purchased_at.slice(0, 10)), 'd MMM yyyy', { locale: id })}`}
+                      </p>
+                    </div>
+                  </div>
+                )
+              }
+
+              return (
+                <>
+                  {unused.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-bold text-orange-500 uppercase tracking-wide">Belum Digunakan</span>
+                        <div className="flex-1 h-px bg-orange-100" />
+                        <span className="text-xs text-orange-400">{unused.length}</span>
+                      </div>
+                      <div className="space-y-2">{unused.map(cp => <PkgCard key={cp.id} cp={cp} />)}</div>
+                    </div>
+                  )}
+
+                  {inProgress.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-bold text-[#2D5A3D] uppercase tracking-wide">Sedang Berjalan</span>
+                        <div className="flex-1 h-px bg-[#E8F0EA]" />
+                        <span className="text-xs text-gray-400">{inProgress.length}</span>
+                      </div>
+                      <div className="space-y-2">{inProgress.map(cp => <PkgCard key={cp.id} cp={cp} />)}</div>
+                    </div>
+                  )}
+
+                  {history.length > 0 && (
+                    <div>
+                      <button
+                        onClick={() => setPkgHistoryExpanded(v => !v)}
+                        className="flex items-center gap-2 w-full mb-2"
+                      >
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Riwayat</span>
+                        <div className="flex-1 h-px bg-gray-100" />
+                        <span className="text-xs text-gray-400">{history.length}</span>
+                        <svg className="w-3.5 h-3.5 text-gray-400 transition-transform" style={{ transform: pkgHistoryExpanded ? 'rotate(180deg)' : 'none' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {pkgHistoryExpanded && (
+                        <div className="space-y-2">{history.map(cp => <PkgCard key={cp.id} cp={cp} />)}</div>
+                      )}
+                    </div>
+                  )}
+
+                  {unused.length === 0 && inProgress.length === 0 && (
+                    <div className="flex flex-col items-center py-20 text-gray-400 gap-3">
+                      <p className="text-sm">Semua paket sudah selesai</p>
+                    </div>
+                  )}
+                </>
+              )
+            })()}</div>
         ) : tab === 'unscheduled' ? (
           <div className="px-4 pt-3">
             {unscheduledBookings.length === 0 ? (
@@ -451,12 +573,22 @@ export default function OrdersPage() {
                             </button>
                           </div>
                         ) : (
-                          <span
-                            className="text-[10px] font-semibold px-2 py-1 rounded-full flex-shrink-0"
-                            style={{ background: sc.bg, color: sc.text }}
-                          >
-                            {statusLabels[booking.status]}
-                          </span>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <span
+                              className="text-[10px] font-semibold px-2 py-1 rounded-full"
+                              style={{ background: sc.bg, color: sc.text }}
+                            >
+                              {statusLabels[booking.status]}
+                            </span>
+                            {booking.status === 'cancelled' && (
+                              <button
+                                onClick={e => { e.stopPropagation(); deleteBooking(booking.id, booking.customer?.name ?? '') }}
+                                className="text-[10px] text-red-400 font-medium active:text-red-600"
+                              >
+                                Hapus
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     )
@@ -571,12 +703,22 @@ export default function OrdersPage() {
                                   : (booking.service?.name ?? 'Layanan dihapus')}
                               </p>
                             </div>
-                            <span
-                              className="text-[10px] font-semibold px-2 py-1 rounded-full flex-shrink-0"
-                              style={{ background: sc.bg, color: sc.text }}
-                            >
-                              {statusLabels[booking.status]}
-                            </span>
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              <span
+                                className="text-[10px] font-semibold px-2 py-1 rounded-full"
+                                style={{ background: sc.bg, color: sc.text }}
+                              >
+                                {statusLabels[booking.status]}
+                              </span>
+                              {booking.status === 'cancelled' && (
+                                <button
+                                  onClick={e => { e.stopPropagation(); deleteBooking(booking.id, booking.customer?.name ?? '') }}
+                                  className="text-[10px] text-red-400 font-medium active:text-red-600"
+                                >
+                                  Hapus
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )
                       })}

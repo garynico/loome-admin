@@ -195,7 +195,7 @@ export default function CustomerProfilePage() {
     (nextBooking.date ? `📅 Tanggal: ${format(parseISO(nextBooking.date), 'EEEE, d MMMM yyyy', { locale: id })}\n` : '') +
     (nextBooking.time ? `⏰ Waktu: ${nextBooking.time.slice(0, 5)}\n` : '') +
     `\n` +
-    `Lokasi:\n📍Loome Hair Removal\nhttps://maps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
+    `Lokasi:\n📍Loome Hair Removal\nmaps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
     `Mohon dibantu konfirmasi dengan memilih salah satu jawaban: Hadir, Batal, Reschedule.\n` +
     `Terimakasih banyak kak! 💚`
   ) : null
@@ -263,7 +263,7 @@ export default function CustomerProfilePage() {
               {waReminderMsg ? 'Reminder WA' : 'WhatsApp'}
             </a>
             <button
-              onClick={() => router.push(`/bookings/new?customer_id=${customer.id}&customer_name=${encodeURIComponent(customer.name)}`)}
+              onClick={() => router.push(`/bookings/new?customer_id=${customer.id}&customer_name=${encodeURIComponent(customer.name)}${customer.gender ? `&customer_gender=${customer.gender}` : ''}`)}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#2D5A3D] text-white text-sm font-semibold active:opacity-80"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

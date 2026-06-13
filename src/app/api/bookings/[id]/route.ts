@@ -24,7 +24,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json()
-  const { status, notes, date, time, service_ids, service_id, duration_minutes, custom_price, dp_amount } = body
+  const { status, notes, date, time, service_ids, service_id, duration_minutes, custom_price, dp_amount, customer_package_id } = body
 
   const updates: Record<string, unknown> = {}
   if (status !== undefined) updates.status = status
@@ -34,6 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (duration_minutes !== undefined) updates.duration_minutes = duration_minutes
   if (custom_price !== undefined) updates.custom_price = custom_price
   if (dp_amount !== undefined) updates.dp_amount = dp_amount
+  if (customer_package_id !== undefined) updates.customer_package_id = customer_package_id || null
   if (service_ids !== undefined) {
     const ids: string[] = Array.isArray(service_ids) ? service_ids : []
     updates.service_ids = ids
@@ -42,7 +43,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     updates.service_id = service_id
   }
 
-  // Fetch current booking before updating (to detect cancellation + restore package session)
+  // Fetch current booking before updating
   const { data: current } = await supabase
     .from('bookings')
     .select('status, customer_package_id')
@@ -58,25 +59,26 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  if (current && current.customer_package_id) {
+  // Handle package session changes
+  if (current) {
+    const oldPkgId = current.customer_package_id as string | null
+    const newPkgId = customer_package_id !== undefined ? (customer_package_id || null) : oldPkgId
     const justCancelled = status === 'cancelled' && current.status !== 'cancelled'
     const justReconfirmed = status === 'confirmed' && current.status === 'cancelled'
+    const pkgChanged = customer_package_id !== undefined && newPkgId !== oldPkgId
 
-    if (justCancelled || justReconfirmed) {
-      const { data: cp } = await supabase
-        .from('customer_packages')
-        .select('sessions_used, sessions_total')
-        .eq('id', current.customer_package_id)
-        .single()
-      if (cp) {
-        const newUsed = justCancelled
-          ? Math.max(0, cp.sessions_used - 1)
-          : Math.min(cp.sessions_total, cp.sessions_used + 1)
-        await supabase.from('customer_packages').update({
-          sessions_used: newUsed,
-          status: newUsed < cp.sessions_total ? 'active' : 'completed',
-        }).eq('id', current.customer_package_id)
-      }
+    const adjustSessions = async (pkgId: string, delta: number) => {
+      await supabase.rpc('adjust_package_sessions', { pkg_id: pkgId, delta })
+    }
+
+    if (pkgChanged) {
+      // Restore session on old package (if booking was active/confirmed)
+      if (oldPkgId && current.status !== 'cancelled') await adjustSessions(oldPkgId, -1)
+      // Deduct session on new package
+      if (newPkgId && current.status !== 'cancelled') await adjustSessions(newPkgId, 1)
+    } else if (oldPkgId) {
+      if (justCancelled) await adjustSessions(oldPkgId, -1)
+      else if (justReconfirmed) await adjustSessions(oldPkgId, 1)
     }
   }
 
@@ -95,18 +97,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   // Restore package session unless booking was already cancelled (cancel already restored it)
   if (current && current.customer_package_id && current.status !== 'cancelled') {
-    const { data: cp } = await supabase
-      .from('customer_packages')
-      .select('sessions_used, sessions_total')
-      .eq('id', current.customer_package_id)
-      .single()
-    if (cp) {
-      const newUsed = Math.max(0, cp.sessions_used - 1)
-      await supabase.from('customer_packages').update({
-        sessions_used: newUsed,
-        status: newUsed < cp.sessions_total ? 'active' : 'completed',
-      }).eq('id', current.customer_package_id)
-    }
+    await supabase.rpc('adjust_package_sessions', { pkg_id: current.customer_package_id, delta: -1 })
   }
 
   return NextResponse.json({ ok: true })

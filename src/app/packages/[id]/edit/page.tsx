@@ -15,6 +15,7 @@ export default function EditPackagePage() {
   const [services, setServices] = useState<Service[]>([])
   const [name, setName] = useState('')
   const [serviceId, setServiceId] = useState('')
+  const [genderTarget, setGenderTarget] = useState<'male' | 'female' | 'all'>('all')
   const [sessions, setSessions] = useState('')
   const [priceRaw, setPriceRaw] = useState('')
   const [loading, setLoading] = useState(true)
@@ -34,6 +35,7 @@ export default function EditPackagePage() {
         if (pkg) {
           setName(pkg.name)
           setServiceId(pkg.service_id ?? '')
+          setGenderTarget(pkg.gender_target ?? 'all')
           setSessions(String(pkg.sessions))
           setPriceRaw(String(pkg.price))
         }
@@ -56,7 +58,7 @@ export default function EditPackagePage() {
     const res = await fetch(`/api/packages/${packageId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.trim(), service_id: serviceId || null, sessions: sess, price }),
+      body: JSON.stringify({ name: name.trim(), service_id: serviceId || null, sessions: sess, price, gender_target: genderTarget }),
     })
     if (res.ok) {
       router.push('/services?tab=packages')
@@ -100,6 +102,27 @@ export default function EditPackagePage() {
         </div>
 
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Gender Paket</label>
+          <div className="grid grid-cols-3 gap-2">
+            {(['all', 'female', 'male'] as const).map(g => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => { setGenderTarget(g); setServiceId('') }}
+                className="flex items-center justify-center gap-1.5 py-3 rounded-xl border text-sm font-semibold transition-all active:opacity-80"
+                style={{
+                  borderColor: genderTarget === g ? '#2D5A3D' : '#e5e7eb',
+                  background: genderTarget === g ? '#E8F0EA' : '#fff',
+                  color: genderTarget === g ? '#2D5A3D' : '#6b7280',
+                }}
+              >
+                {g === 'all' ? 'Semua' : g === 'female' ? '♀ Wanita' : '♂ Pria'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Layanan yang Dicakup</label>
           <select
             value={serviceId}
@@ -107,9 +130,11 @@ export default function EditPackagePage() {
             className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 text-base focus:outline-none focus:ring-2 focus:ring-[#2D5A3D]"
           >
             <option value="">— Pilih layanan (opsional) —</option>
-            {services.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
+            {services
+              .filter(s => genderTarget === 'all' || s.gender_target === 'all' || s.gender_target === genderTarget)
+              .map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
           </select>
         </div>
 

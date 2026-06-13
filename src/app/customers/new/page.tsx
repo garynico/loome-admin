@@ -29,7 +29,7 @@ function NewCustomerForm() {
     if (res.ok) {
       const customer = await res.json()
       if (redirectTo === 'booking') {
-        router.push(`/bookings/new?customer_id=${customer.id}&customer_name=${encodeURIComponent(customer.name)}`)
+        router.push(`/bookings/new?customer_id=${customer.id}&customer_name=${encodeURIComponent(customer.name)}${customer.gender ? `&customer_gender=${customer.gender}` : ''}`)
       } else {
         router.push(`/customers/${customer.id}`)
       }

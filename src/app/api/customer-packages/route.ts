@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('customer_packages')
-    .select('*, service:services(*), customer:customers(*)')
+    .select('*, service:services(*), customer:customers(*), package:packages(gender_target)')
     .order('purchased_at', { ascending: true })
 
   if (customerId) query = query.eq('customer_id', customerId)
@@ -17,7 +17,30 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  // Attach last confirmed booking date per customer_package
+  const ids = (data ?? []).map((cp: Record<string, unknown>) => cp.id as string)
+  let lastUsedMap: Record<string, string> = {}
+  if (ids.length > 0) {
+    const { data: bookings } = await supabase
+      .from('bookings')
+      .select('customer_package_id, date')
+      .in('customer_package_id', ids)
+      .neq('status', 'cancelled')
+      .not('date', 'is', null)
+      .order('date', { ascending: false })
+    for (const b of bookings ?? []) {
+      if (b.customer_package_id && !lastUsedMap[b.customer_package_id]) {
+        lastUsedMap[b.customer_package_id] = b.date
+      }
+    }
+  }
+
+  const enriched = (data ?? []).map((cp: Record<string, unknown>) => ({
+    ...cp,
+    last_booking_date: lastUsedMap[cp.id as string] ?? null,
+  }))
+  return NextResponse.json(enriched)
 }
 
 export async function POST(req: NextRequest) {

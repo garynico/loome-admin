@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { format, parseISO } from 'date-fns'
 import { id } from 'date-fns/locale'
-import type { BookingWithRelations, Service } from '@/types'
+import type { BookingWithRelations, Service, CustomerPackage } from '@/types'
 import TimePicker from '@/components/TimePicker'
 
 function formatPrice(price: number) {
@@ -39,6 +39,8 @@ export default function BookingDetailPage() {
   const [allServices, setAllServices] = useState<Service[]>([])
   const [editServiceIds, setEditServiceIds] = useState<string[]>([])
   const [editCoveredServiceId, setEditCoveredServiceId] = useState<string | null>(null)
+  const [editPackages, setEditPackages] = useState<CustomerPackage[]>([])
+  const [editUsePackageId, setEditUsePackageId] = useState<string | null>(null)
   const [savingServices, setSavingServices] = useState(false)
 
   useEffect(() => {
@@ -102,15 +104,20 @@ export default function BookingDetailPage() {
   }
 
   async function openEditServices() {
-    const current = (booking?.services?.length ? booking.services : booking?.service ? [booking.service] : []).map(s => s.id)
+    if (!booking) return
+    const current = (booking.services?.length ? booking.services : booking.service ? [booking.service] : []).map(s => s.id)
     setEditServiceIds(current)
-    const [svcRes, pkgRes] = await Promise.all([
+    setEditUsePackageId(booking.customer_package_id ?? null)
+    const [svcRes, custPkgRes, curPkgRes] = await Promise.all([
       allServices.length === 0 ? fetch('/api/services') : Promise.resolve(null),
-      booking?.customer_package_id ? fetch(`/api/customer-packages/${booking.customer_package_id}`) : Promise.resolve(null),
+      fetch(`/api/customer-packages?customer_id=${booking.customer_id}&status=active`),
+      booking.customer_package_id ? fetch(`/api/customer-packages/${booking.customer_package_id}`) : Promise.resolve(null),
     ])
     if (svcRes?.ok) setAllServices(await svcRes.json())
-    if (pkgRes?.ok) {
-      const pkg = await pkgRes.json()
+    const pkgs: CustomerPackage[] = custPkgRes.ok ? await custPkgRes.json() : []
+    setEditPackages(pkgs)
+    if (curPkgRes?.ok) {
+      const pkg = await curPkgRes.json()
       setEditCoveredServiceId(pkg.service_id ?? null)
     } else {
       setEditCoveredServiceId(null)
@@ -127,7 +134,7 @@ export default function BookingDetailPage() {
     const res = await fetch(`/api/bookings/${bookingId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ service_ids: editServiceIds, custom_price: newTotal }),
+      body: JSON.stringify({ service_ids: editServiceIds, custom_price: newTotal, customer_package_id: editUsePackageId }),
     })
     if (res.ok) { setBooking(await res.json()); setShowEditServices(false) }
     setSavingServices(false)
@@ -156,7 +163,7 @@ export default function BookingDetailPage() {
   const svcLine = svcList.map(s => `• ${s.name}`).join('\n') || 'Layanan'
   const totalPrice = booking.custom_price ?? svcList.reduce((s, x) => s + x.price, 0)
   const svcNames = svcList.map(s => s.name).join(', ') || 'Layanan'
-  const locationBlock = `Lokasi:\n📍Loome Hair Removal\nhttps://maps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic`
+  const locationBlock = `Lokasi:\n📍Loome Hair Removal\nmaps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic`
   const waMsg = encodeURIComponent(
     `Halo ${booking.customer?.name},\n\n` +
     `Berikut konfirmasi janji Anda di Loome Hair Removal:\n\n` +
@@ -481,8 +488,62 @@ export default function BookingDetailPage() {
                 </svg>
               </button>
             </div>
-            <div className="overflow-y-auto flex-1 space-y-2 mb-4">
-              {allServices.filter(s => s.is_active || editServiceIds.includes(s.id)).map(s => {
+            <div className="overflow-y-auto flex-1 mb-4 space-y-4">
+              {editPackages.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Paket Aktif</p>
+                  <div className="space-y-2">
+                    {editPackages.map(cp => {
+                      const selected = editUsePackageId === cp.id
+                      const remaining = cp.sessions_total - cp.sessions_used
+                      return (
+                        <button
+                          key={cp.id}
+                          type="button"
+                          onClick={() => {
+                            if (selected) {
+                              setEditUsePackageId(null)
+                              setEditCoveredServiceId(null)
+                            } else {
+                              setEditUsePackageId(cp.id)
+                              setEditCoveredServiceId(cp.service_id ?? null)
+                              if (cp.service_id && !editServiceIds.includes(cp.service_id)) {
+                                setEditServiceIds(prev => [...prev, cp.service_id!])
+                              }
+                            }
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl border text-left active:opacity-80"
+                          style={{ borderColor: selected ? '#2D5A3D' : '#e5e7eb', background: selected ? '#2D5A3D' : '#fff' }}
+                        >
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{ background: selected ? 'rgba(255,255,255,0.2)' : '#E8F0EA' }}>
+                            <svg className="w-4 h-4" style={{ color: selected ? '#fff' : '#2D5A3D' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold truncate" style={{ color: selected ? '#fff' : '#111827' }}>{cp.package_name}</p>
+                            <p className="text-xs mt-0.5" style={{ color: selected ? 'rgba(255,255,255,0.7)' : '#6b7280' }}>
+                              {remaining} sesi tersisa · {cp.service?.name ?? 'Semua layanan'}
+                            </p>
+                          </div>
+                          <span className="text-[10px] font-bold flex-shrink-0 px-2 py-1 rounded-full"
+                            style={{ background: selected ? 'rgba(255,255,255,0.2)' : '#E8F0EA', color: selected ? '#fff' : '#2D5A3D' }}>
+                            {selected ? 'Aktif' : 'Gunakan'}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="h-px bg-gray-100 mt-3" />
+                </div>
+              )}
+              <div className="space-y-2">
+              {allServices.filter(s => {
+                const customerGender = booking?.customer?.gender ?? null
+                const genderOk = !customerGender || s.gender_target === 'all' || s.gender_target === customerGender
+                return (s.is_active && genderOk) || editServiceIds.includes(s.id)
+              }).map(s => {
                 const selected = editServiceIds.includes(s.id)
                 return (
                   <button
@@ -504,6 +565,7 @@ export default function BookingDetailPage() {
                   </button>
                 )
               })}
+              </div>
             </div>
             {editServiceIds.length > 0 && (
               <div className="flex justify-between items-center px-1 mb-3">

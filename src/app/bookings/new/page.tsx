@@ -23,6 +23,7 @@ function NewBookingForm() {
 
   const preCustomerId = searchParams.get('customer_id')
   const preCustomerName = searchParams.get('customer_name')
+  const preCustomerGender = searchParams.get('customer_gender') as 'male' | 'female' | null
   const preDate = searchParams.get('date') ?? format(new Date(), 'yyyy-MM-dd')
   const preTime = searchParams.get('time') ?? '09:00'
   const preEndTime = searchParams.get('endtime') ?? null
@@ -37,7 +38,7 @@ function NewBookingForm() {
 
   const [customerId, setCustomerId] = useState(preCustomerId ?? '')
   const [customerName, setCustomerName] = useState(preCustomerName ?? '')
-  const [customerGender, setCustomerGender] = useState<'male' | 'female' | null>(null)
+  const [customerGender, setCustomerGender] = useState<'male' | 'female' | null>(preCustomerGender)
   const [customerSearch, setCustomerSearch] = useState(preCustomerName ?? '')
   const [customerResults, setCustomerResults] = useState<Customer[]>([])
   const [showSearch, setShowSearch] = useState(!preCustomerId)
@@ -83,9 +84,11 @@ function NewBookingForm() {
   const coveredServiceId = activePackage?.service_id ?? null
   const calculatedTotal = selectedServices.reduce((sum, s) => sum + (s.id === coveredServiceId ? 0 : s.price), 0)
 
-  // Filter by customer gender, then collapse to preview count
-  const relevantServices = customerGender
-    ? services.filter(s => s.gender_target === 'all' || s.gender_target === customerGender)
+  // When a package is selected, filter by the package's gender; otherwise filter by customer gender
+  const activePackageGender = activePackage?.package?.gender_target ?? null
+  const effectiveGender = activePackageGender && activePackageGender !== 'all' ? activePackageGender : customerGender
+  const relevantServices = effectiveGender
+    ? services.filter(s => s.gender_target === 'all' || s.gender_target === effectiveGender)
     : services
   // Always include already-selected services even if filtered out
   const visibleServices = servicesExpanded
@@ -224,7 +227,7 @@ function NewBookingForm() {
       `📋 Layanan: ${savedBooking.serviceNames.join(', ')}\n` +
       (dateFormatted ? `📅 Tanggal: ${dateFormatted}\n` : '') +
       (savedBooking.time ? `⏰ Waktu: ${savedBooking.time.slice(0, 5)}\n` : '') +
-      `\nLokasi:\n📍Loome Hair Removal\nhttps://maps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
+      `\nLokasi:\n📍Loome Hair Removal\nmaps.app.goo.gl/ZAgDR6Ewjppjf5JP7?g_st=ic\n\n` +
       `Ditunggu kedatangannya! 💚`
     )
 
@@ -658,9 +661,13 @@ function NewBookingForm() {
                   <span>{formatPrice(calculatedTotal)}</span>
                 </div>
               )}
-              <p className="text-sm text-gray-700 mt-1">
-                {format(parseISO(date), 'EEEE, d MMMM yyyy', { locale: id })} · {time.slice(0, 5)}{endTime ? ` → ${endTime.slice(0, 5)}` : ''}
-              </p>
+              {scheduleNow ? (
+                <p className="text-sm text-gray-700 mt-1">
+                  {format(parseISO(date), 'EEEE, d MMMM yyyy', { locale: id })} · {time.slice(0, 5)}{endTime ? ` → ${endTime.slice(0, 5)}` : ''}
+                </p>
+              ) : (
+                <p className="text-sm text-orange-500 mt-1">Jadwal belum ditetapkan</p>
+              )}
             </div>
           )}
 

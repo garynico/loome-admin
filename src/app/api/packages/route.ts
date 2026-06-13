@@ -14,13 +14,13 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const { name, service_id, sessions, price } = await req.json()
+  const { name, service_id, sessions, price, gender_target } = await req.json()
   if (!name?.trim() || !sessions || !price) {
     return NextResponse.json({ error: 'Name, sessions and price are required' }, { status: 400 })
   }
   const { data, error } = await supabase
     .from('packages')
-    .insert({ name: name.trim(), service_id: service_id || null, sessions: Number(sessions), price: Number(price) })
+    .insert({ name: name.trim(), service_id: service_id || null, sessions: Number(sessions), price: Number(price), gender_target: gender_target || 'all' })
     .select('*, service:services(*)')
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

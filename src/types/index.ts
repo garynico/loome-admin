@@ -23,6 +23,7 @@ export interface Package {
   service_id: string | null
   sessions: number
   price: number
+  gender_target: 'male' | 'female' | 'all'
   is_active: boolean
   created_at: string
   service?: Service
@@ -37,11 +38,13 @@ export interface CustomerPackage {
   sessions_total: number
   sessions_used: number
   paid_price: number
-  status: 'active' | 'completed'
+  status: 'active' | 'completed' | 'cancelled'
   purchased_at: string
   notes: string | null
   service?: Service
   customer?: Customer
+  package?: { gender_target: 'male' | 'female' | 'all' | null }
+  last_booking_date?: string | null
 }
 
 export interface Booking {

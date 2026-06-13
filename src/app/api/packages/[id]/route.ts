@@ -5,13 +5,14 @@ import { supabase } from '@/lib/supabase'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json()
-  const { name, service_id, sessions, price, is_active } = body
+  const { name, service_id, sessions, price, is_active, gender_target } = body
   const updates: Record<string, unknown> = {}
   if (name !== undefined) updates.name = name.trim()
   if (service_id !== undefined) updates.service_id = service_id || null
   if (sessions !== undefined) updates.sessions = Number(sessions)
   if (price !== undefined) updates.price = Number(price)
   if (is_active !== undefined) updates.is_active = is_active
+  if (gender_target !== undefined) updates.gender_target = gender_target || 'all'
 
   const { data, error } = await supabase
     .from('packages')
