@@ -143,18 +143,31 @@ export default function BookingDetailPage() {
     setSavingServices(false)
   }
 
-  async function saveNotaImage() {
+  async function sendNotaImage() {
     const node = document.getElementById('nota-print')
     if (!node) return
     setSavingNota(true)
     try {
       const dataUrl = await toPng(node, { backgroundColor: '#ffffff', pixelRatio: 2 })
-      const link = document.createElement('a')
-      link.download = `nota-${bookingId.slice(-8).toUpperCase()}.png`
-      link.href = dataUrl
-      link.click()
+      const fileName = `nota-${bookingId.slice(-8).toUpperCase()}.png`
+      const blob = await (await fetch(dataUrl)).blob()
+      const file = new File([blob], fileName, { type: 'image/png' })
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Nota Pembayaran',
+          text: `Nota pembayaran untuk ${booking?.customer?.name ?? ''}`,
+        })
+      } else {
+        const link = document.createElement('a')
+        link.download = fileName
+        link.href = dataUrl
+        link.click()
+      }
     } catch (err) {
-      alert('Gagal menyimpan gambar: ' + (err instanceof Error ? err.message : String(err)))
+      if (err instanceof Error && err.name === 'AbortError') return
+      alert('Gagal mengirim nota: ' + (err instanceof Error ? err.message : String(err)))
     } finally {
       setSavingNota(false)
     }
@@ -592,7 +605,7 @@ export default function BookingDetailPage() {
             </div>
 
             <button
-              onClick={saveNotaImage}
+              onClick={sendNotaImage}
               disabled={savingNota}
               className="mt-5 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base active:opacity-80 disabled:opacity-50"
             >
@@ -600,10 +613,10 @@ export default function BookingDetailPage() {
                 <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
               ) : (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h16M4 8a2 2 0 00-2 2v8a2 2 0 002 2h16a2 2 0 002-2v-8a2 2 0 00-2-2M4 8V6a2 2 0 012-2h12a2 2 0 012 2v2" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342a4 4 0 100-2.684m0 2.684a4 4 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a4 4 0 105.367-5.367 4 4 0 00-5.367 5.367zm0 11.316a4 4 0 105.367 5.367 4 4 0 00-5.367-5.367z" />
                 </svg>
               )}
-              {savingNota ? 'Menyimpan...' : 'Simpan Nota ke Galeri'}
+              {savingNota ? 'Mengirim...' : 'Kirim Nota'}
             </button>
           </div>
         </div>
