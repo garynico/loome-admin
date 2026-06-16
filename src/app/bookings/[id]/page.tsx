@@ -35,6 +35,7 @@ export default function BookingDetailPage() {
   const [rsEndTime, setRsEndTime] = useState('')
   const [rsSaving, setRsSaving] = useState(false)
 
+  const [showNota, setShowNota] = useState(false)
   const [showEditServices, setShowEditServices] = useState(false)
   const [allServices, setAllServices] = useState<Service[]>([])
   const [editServiceIds, setEditServiceIds] = useState<string[]>([])
@@ -358,6 +359,16 @@ export default function BookingDetailPage() {
             Kirim Reminder WhatsApp
           </a>
 
+          <button
+            onClick={() => setShowNota(true)}
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm active:bg-gray-50"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Cetak Nota
+          </button>
+
           {booking.status !== 'cancelled' && booking.status !== 'completed' && (
             <button
               onClick={openReschedule}
@@ -470,6 +481,110 @@ export default function BookingDetailPage() {
               className="w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base disabled:opacity-40 active:opacity-80"
             >
               {rsSaving ? 'Menyimpan...' : 'Simpan Jadwal Baru'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Nota modal */}
+      {showNota && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <style>{`
+            @media print {
+              body * { visibility: hidden !important; }
+              #nota-print, #nota-print * { visibility: visible !important; }
+              #nota-print { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; padding: 24px !important; background: white !important; }
+            }
+          `}</style>
+          <div className="absolute inset-0 bg-black/40 no-print" onClick={() => setShowNota(false)} />
+          <div className="relative bg-white rounded-t-3xl px-4 pt-5 pb-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4 no-print">
+              <h2 className="text-base font-bold text-gray-900">Nota Pembayaran</h2>
+              <button onClick={() => setShowNota(false)} className="p-1 text-gray-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div id="nota-print" className="font-mono text-sm text-gray-900 bg-white">
+              <div className="text-center mb-4">
+                <p className="font-bold text-base tracking-wide">LOOME HAIR REMOVAL</p>
+                <p className="text-xs text-gray-500">Nota Pembayaran</p>
+              </div>
+              <div className="border-t border-dashed border-gray-400 my-3" />
+              <div className="space-y-1 mb-3">
+                <div className="flex gap-2">
+                  <span className="text-gray-500 w-20 flex-shrink-0">Nama</span>
+                  <span className="flex-1">: {booking.customer?.name}</span>
+                </div>
+                {booking.customer?.phone && (
+                  <div className="flex gap-2">
+                    <span className="text-gray-500 w-20 flex-shrink-0">Telp</span>
+                    <span className="flex-1">: {booking.customer.phone}</span>
+                  </div>
+                )}
+                {dateFormatted && (
+                  <div className="flex gap-2">
+                    <span className="text-gray-500 w-20 flex-shrink-0">Tanggal</span>
+                    <span className="flex-1">: {dateFormatted}</span>
+                  </div>
+                )}
+                {booking.time && (
+                  <div className="flex gap-2">
+                    <span className="text-gray-500 w-20 flex-shrink-0">Waktu</span>
+                    <span className="flex-1">: {booking.time.slice(0, 5)}</span>
+                  </div>
+                )}
+              </div>
+              <div className="border-t border-dashed border-gray-400 my-3" />
+              <p className="text-xs text-gray-500 mb-2">LAYANAN</p>
+              <div className="space-y-1 mb-3">
+                {svcList.map(s => (
+                  <div key={s.id} className="flex justify-between">
+                    <span className="flex-1 pr-2">{s.name}</span>
+                    <span className="flex-shrink-0">{formatPrice(s.price)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-dashed border-gray-400 my-3" />
+              <div className="space-y-1">
+                <div className="flex justify-between font-bold">
+                  <span>Total</span>
+                  <span>{formatPrice(totalPrice)}</span>
+                </div>
+                {booking.dp_amount > 0 && (
+                  <>
+                    <div className="flex justify-between text-green-700">
+                      <span>DP Diterima</span>
+                      <span>- {formatPrice(booking.dp_amount)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-orange-700">
+                      <span>Sisa Bayar</span>
+                      <span>{formatPrice(totalPrice - booking.dp_amount)}</span>
+                    </div>
+                  </>
+                )}
+                {booking.customer_package_id && (
+                  <p className="text-xs text-purple-600 mt-1">* Menggunakan Paket</p>
+                )}
+              </div>
+              <div className="border-t border-dashed border-gray-400 my-3" />
+              <div className="text-center text-xs text-gray-500 space-y-1">
+                <p>Terima kasih atas kepercayaan Anda!</p>
+                <p>Ref: #{bookingId.slice(-8).toUpperCase()}</p>
+                <p>Dicetak: {format(new Date(), 'd MMM yyyy HH:mm', { locale: id })}</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => window.print()}
+              className="no-print mt-5 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base active:opacity-80"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Print / Simpan PDF
             </button>
           </div>
         </div>
