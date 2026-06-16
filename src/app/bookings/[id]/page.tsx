@@ -489,27 +489,9 @@ export default function BookingDetailPage() {
       {/* Nota modal */}
       {showNota && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <style>{`
-            @media print {
-              @page { margin: 8mm; size: A5 portrait; }
-              body * { visibility: hidden !important; }
-              #nota-print, #nota-print * { visibility: visible !important; }
-              #nota-print {
-                position: fixed !important;
-                top: 0 !important; left: 0 !important;
-                width: 100% !important;
-                padding: 12px !important;
-                background: white !important;
-                font-size: 11px !important;
-                line-height: 1.35 !important;
-              }
-              #nota-print .print-divider { margin-top: 6px !important; margin-bottom: 6px !important; }
-              #nota-print .print-section { margin-bottom: 6px !important; }
-            }
-          `}</style>
-          <div className="absolute inset-0 bg-black/40 no-print" onClick={() => setShowNota(false)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowNota(false)} />
           <div className="relative bg-white rounded-t-3xl px-4 pt-5 pb-8 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4 no-print">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-gray-900">Nota Pembayaran</h2>
               <button onClick={() => setShowNota(false)} className="p-1 text-gray-400">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -519,12 +501,12 @@ export default function BookingDetailPage() {
             </div>
 
             <div id="nota-print" className="font-mono text-sm text-gray-900 bg-white">
-              <div className="print-section text-center mb-4">
+              <div className="text-center mb-4">
                 <p className="font-bold text-base tracking-wide">LOOME HAIR REMOVAL</p>
                 <p className="text-xs text-gray-500">Nota Pembayaran</p>
               </div>
-              <div className="print-divider border-t border-dashed border-gray-400 my-3" />
-              <div className="print-section space-y-1 mb-3">
+              <div className="border-t border-dashed border-gray-400 my-3" />
+              <div className="space-y-1 mb-3">
                 <div className="flex gap-2">
                   <span className="text-gray-500 w-20 flex-shrink-0">Nama</span>
                   <span className="flex-1">: {booking.customer?.name}</span>
@@ -548,9 +530,9 @@ export default function BookingDetailPage() {
                   </div>
                 )}
               </div>
-              <div className="print-divider border-t border-dashed border-gray-400 my-3" />
+              <div className="border-t border-dashed border-gray-400 my-3" />
               <p className="text-xs text-gray-500 mb-2">LAYANAN</p>
-              <div className="print-section space-y-1 mb-3">
+              <div className="space-y-1 mb-3">
                 {svcList.map(s => (
                   <div key={s.id} className="flex justify-between">
                     <span className="flex-1 pr-2">{s.name}</span>
@@ -558,8 +540,8 @@ export default function BookingDetailPage() {
                   </div>
                 ))}
               </div>
-              <div className="print-divider border-t border-dashed border-gray-400 my-3" />
-              <div className="print-section space-y-1">
+              <div className="border-t border-dashed border-gray-400 my-3" />
+              <div className="space-y-1">
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
                   <span>{formatPrice(totalPrice)}</span>
@@ -580,8 +562,8 @@ export default function BookingDetailPage() {
                   <p className="text-xs text-purple-600 mt-1">* Menggunakan Paket</p>
                 )}
               </div>
-              <div className="print-divider border-t border-dashed border-gray-400 my-3" />
-              <div className="print-section text-center text-xs text-gray-500 space-y-1">
+              <div className="border-t border-dashed border-gray-400 my-3" />
+              <div className="text-center text-xs text-gray-500 space-y-1">
                 <p>Terima kasih atas kepercayaan Anda!</p>
                 <p>Ref: #{bookingId.slice(-8).toUpperCase()}</p>
                 <p>Dicetak: {format(new Date(), 'd MMM yyyy HH:mm', { locale: id })}</p>
@@ -589,8 +571,50 @@ export default function BookingDetailPage() {
             </div>
 
             <button
-              onClick={() => window.print()}
-              className="no-print mt-5 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base active:opacity-80"
+              onClick={() => {
+                const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+                  @page{margin:10mm;size:A5 portrait;}
+                  *{box-sizing:border-box;margin:0;padding:0;}
+                  body{font-family:'Courier New',monospace;font-size:12px;line-height:1.5;color:#111;}
+                  .c{text-align:center;} .b{font-weight:bold;}
+                  .d{border-top:1px dashed #999;margin:8px 0;}
+                  .row{display:flex;justify-content:space-between;margin-bottom:3px;}
+                  .ri{display:flex;gap:8px;margin-bottom:3px;}
+                  .lbl{color:#666;width:72px;flex-shrink:0;}
+                  .sm{font-size:10px;color:#666;}
+                  .gr{color:#15803d;} .or{color:#c2410c;font-weight:bold;}
+                  .pu{font-size:10px;color:#9333ea;margin-top:3px;}
+                  .mb{margin-bottom:8px;}
+                </style></head><body>
+                  <div class="c mb"><div class="b" style="font-size:14px;letter-spacing:1px;">LOOME HAIR REMOVAL</div><div class="sm">Nota Pembayaran</div></div>
+                  <div class="d"></div>
+                  <div class="mb">
+                    <div class="ri"><span class="lbl">Nama</span><span>: ${booking.customer?.name ?? '-'}</span></div>
+                    ${booking.customer?.phone ? `<div class="ri"><span class="lbl">Telp</span><span>: ${booking.customer.phone}</span></div>` : ''}
+                    ${dateFormatted ? `<div class="ri"><span class="lbl">Tanggal</span><span>: ${dateFormatted}</span></div>` : ''}
+                    ${booking.time ? `<div class="ri"><span class="lbl">Waktu</span><span>: ${booking.time.slice(0,5)}</span></div>` : ''}
+                  </div>
+                  <div class="d"></div>
+                  <div class="sm mb" style="margin-bottom:4px;">LAYANAN</div>
+                  <div class="mb">${svcList.map(s => `<div class="row"><span>${s.name}</span><span>${formatPrice(s.price)}</span></div>`).join('')}</div>
+                  <div class="d"></div>
+                  <div class="mb">
+                    <div class="row b"><span>Total</span><span>${formatPrice(totalPrice)}</span></div>
+                    ${booking.dp_amount > 0 ? `<div class="row gr"><span>DP Diterima</span><span>- ${formatPrice(booking.dp_amount)}</span></div><div class="row or"><span>Sisa Bayar</span><span>${formatPrice(totalPrice - booking.dp_amount)}</span></div>` : ''}
+                    ${booking.customer_package_id ? `<div class="pu">* Menggunakan Paket</div>` : ''}
+                  </div>
+                  <div class="d"></div>
+                  <div class="c sm"><div>Terima kasih atas kepercayaan Anda!</div><div>Ref: #${bookingId.slice(-8).toUpperCase()}</div><div>Dicetak: ${format(new Date(), 'd MMM yyyy HH:mm', { locale: id })}</div></div>
+                </body></html>`
+                const win = window.open('', '_blank', 'width=420,height=600')
+                if (!win) return
+                win.document.write(html)
+                win.document.close()
+                win.focus()
+                win.print()
+                win.onafterprint = () => win.close()
+              }}
+              className="mt-5 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base active:opacity-80"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
