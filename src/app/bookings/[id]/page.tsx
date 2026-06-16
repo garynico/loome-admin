@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { format, parseISO } from 'date-fns'
 import { id } from 'date-fns/locale'
+import { toPng } from 'html-to-image'
 import type { BookingWithRelations, Service, CustomerPackage } from '@/types'
 import TimePicker from '@/components/TimePicker'
 
@@ -36,6 +37,7 @@ export default function BookingDetailPage() {
   const [rsSaving, setRsSaving] = useState(false)
 
   const [showNota, setShowNota] = useState(false)
+  const [savingNota, setSavingNota] = useState(false)
   const [showEditServices, setShowEditServices] = useState(false)
   const [allServices, setAllServices] = useState<Service[]>([])
   const [editServiceIds, setEditServiceIds] = useState<string[]>([])
@@ -139,6 +141,23 @@ export default function BookingDetailPage() {
     })
     if (res.ok) { setBooking(await res.json()); setShowEditServices(false) }
     setSavingServices(false)
+  }
+
+  async function saveNotaImage() {
+    const node = document.getElementById('nota-print')
+    if (!node) return
+    setSavingNota(true)
+    try {
+      const dataUrl = await toPng(node, { backgroundColor: '#ffffff', pixelRatio: 2 })
+      const link = document.createElement('a')
+      link.download = `nota-${bookingId.slice(-8).toUpperCase()}.png`
+      link.href = dataUrl
+      link.click()
+    } catch (err) {
+      alert('Gagal menyimpan gambar: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setSavingNota(false)
+    }
   }
 
   if (loading) {
@@ -489,14 +508,6 @@ export default function BookingDetailPage() {
       {/* Nota modal */}
       {showNota && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <style>{`
-            @media print {
-              @page { margin: 10mm; size: A5 portrait; }
-              body * { visibility: hidden !important; }
-              #nota-print, #nota-print * { visibility: visible !important; }
-              #nota-print { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; padding: 16px !important; }
-            }
-          `}</style>
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowNota(false)} />
           <div className="relative z-10 bg-white rounded-t-3xl px-4 pt-5 pb-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
@@ -579,36 +590,18 @@ export default function BookingDetailPage() {
             </div>
 
             <button
-              onClick={() => {
-                try {
-                  if (typeof window.print !== 'function') {
-                    alert('Browser ini tidak mendukung fitur print. Coba buka di Chrome langsung (bukan dari WhatsApp/Instagram).')
-                    return
-                  }
-                  const docEl = document.documentElement
-                  const body = document.body
-                  const prevDocH = docEl.style.height
-                  const prevBodyH = body.style.height
-                  const prevBodyMaxW = body.style.maxWidth
-                  docEl.style.height = 'auto'
-                  body.style.height = 'auto'
-                  body.style.maxWidth = 'none'
-                  window.print()
-                  window.onafterprint = () => {
-                    docEl.style.height = prevDocH
-                    body.style.height = prevBodyH
-                    body.style.maxWidth = prevBodyMaxW
-                  }
-                } catch (err) {
-                  alert('Gagal mencetak: ' + (err instanceof Error ? err.message : String(err)))
-                }
-              }}
-              className="mt-5 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base active:opacity-80"
+              onClick={saveNotaImage}
+              disabled={savingNota}
+              className="mt-5 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base active:opacity-80 disabled:opacity-50"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-              Print / Simpan PDF
+              {savingNota ? (
+                <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h16M4 8a2 2 0 00-2 2v8a2 2 0 002 2h16a2 2 0 002-2v-8a2 2 0 00-2-2M4 8V6a2 2 0 012-2h12a2 2 0 012 2v2" />
+                </svg>
+              )}
+              {savingNota ? 'Menyimpan...' : 'Simpan Nota ke Galeri'}
             </button>
           </div>
         </div>
