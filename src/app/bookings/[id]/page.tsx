@@ -605,14 +605,12 @@ export default function BookingDetailPage() {
                   </div>
                   <div class="d"></div>
                   <div class="c sm"><div>Terima kasih atas kepercayaan Anda!</div><div>Ref: #${bookingId.slice(-8).toUpperCase()}</div><div>Dicetak: ${format(new Date(), 'd MMM yyyy HH:mm', { locale: id })}</div></div>
+                  <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};</script>
                 </body></html>`
                 const win = window.open('', '_blank', 'width=420,height=600')
                 if (!win) return
                 win.document.write(html)
                 win.document.close()
-                win.focus()
-                win.print()
-                win.onafterprint = () => win.close()
               }}
               className="mt-5 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base active:opacity-80"
             >
