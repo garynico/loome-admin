@@ -489,6 +489,14 @@ export default function BookingDetailPage() {
       {/* Nota modal */}
       {showNota && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <style>{`
+            @media print {
+              @page { margin: 10mm; size: A5 portrait; }
+              body * { visibility: hidden !important; }
+              #nota-print, #nota-print * { visibility: visible !important; }
+              #nota-print { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; padding: 16px !important; }
+            }
+          `}</style>
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowNota(false)} />
           <div className="relative bg-white rounded-t-3xl px-4 pt-5 pb-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
@@ -572,45 +580,20 @@ export default function BookingDetailPage() {
 
             <button
               onClick={() => {
-                const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-                  @page{margin:10mm;size:A5 portrait;}
-                  *{box-sizing:border-box;margin:0;padding:0;}
-                  body{font-family:'Courier New',monospace;font-size:12px;line-height:1.5;color:#111;}
-                  .c{text-align:center;} .b{font-weight:bold;}
-                  .d{border-top:1px dashed #999;margin:8px 0;}
-                  .row{display:flex;justify-content:space-between;margin-bottom:3px;}
-                  .ri{display:flex;gap:8px;margin-bottom:3px;}
-                  .lbl{color:#666;width:72px;flex-shrink:0;}
-                  .sm{font-size:10px;color:#666;}
-                  .gr{color:#15803d;} .or{color:#c2410c;font-weight:bold;}
-                  .pu{font-size:10px;color:#9333ea;margin-top:3px;}
-                  .mb{margin-bottom:8px;}
-                </style></head><body>
-                  <div class="c mb"><div class="b" style="font-size:14px;letter-spacing:1px;">LOOME HAIR REMOVAL</div><div class="sm">Nota Pembayaran</div></div>
-                  <div class="d"></div>
-                  <div class="mb">
-                    <div class="ri"><span class="lbl">Nama</span><span>: ${booking.customer?.name ?? '-'}</span></div>
-                    ${booking.customer?.phone ? `<div class="ri"><span class="lbl">Telp</span><span>: ${booking.customer.phone}</span></div>` : ''}
-                    ${dateFormatted ? `<div class="ri"><span class="lbl">Tanggal</span><span>: ${dateFormatted}</span></div>` : ''}
-                    ${booking.time ? `<div class="ri"><span class="lbl">Waktu</span><span>: ${booking.time.slice(0,5)}</span></div>` : ''}
-                  </div>
-                  <div class="d"></div>
-                  <div class="sm mb" style="margin-bottom:4px;">LAYANAN</div>
-                  <div class="mb">${svcList.map(s => `<div class="row"><span>${s.name}</span><span>${formatPrice(s.price)}</span></div>`).join('')}</div>
-                  <div class="d"></div>
-                  <div class="mb">
-                    <div class="row b"><span>Total</span><span>${formatPrice(totalPrice)}</span></div>
-                    ${booking.dp_amount > 0 ? `<div class="row gr"><span>DP Diterima</span><span>- ${formatPrice(booking.dp_amount)}</span></div><div class="row or"><span>Sisa Bayar</span><span>${formatPrice(totalPrice - booking.dp_amount)}</span></div>` : ''}
-                    ${booking.customer_package_id ? `<div class="pu">* Menggunakan Paket</div>` : ''}
-                  </div>
-                  <div class="d"></div>
-                  <div class="c sm"><div>Terima kasih atas kepercayaan Anda!</div><div>Ref: #${bookingId.slice(-8).toUpperCase()}</div><div>Dicetak: ${format(new Date(), 'd MMM yyyy HH:mm', { locale: id })}</div></div>
-                  <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};</script>
-                </body></html>`
-                const win = window.open('', '_blank', 'width=420,height=600')
-                if (!win) return
-                win.document.write(html)
-                win.document.close()
+                const docEl = document.documentElement
+                const body = document.body
+                const prevDocH = docEl.style.height
+                const prevBodyH = body.style.height
+                const prevBodyMaxW = body.style.maxWidth
+                docEl.style.height = 'auto'
+                body.style.height = 'auto'
+                body.style.maxWidth = 'none'
+                window.print()
+                window.onafterprint = () => {
+                  docEl.style.height = prevDocH
+                  body.style.height = prevBodyH
+                  body.style.maxWidth = prevBodyMaxW
+                }
               }}
               className="mt-5 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base active:opacity-80"
             >
