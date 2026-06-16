@@ -498,7 +498,7 @@ export default function BookingDetailPage() {
             }
           `}</style>
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowNota(false)} />
-          <div className="relative bg-white rounded-t-3xl px-4 pt-5 pb-8 max-h-[90vh] overflow-y-auto">
+          <div className="relative z-10 bg-white rounded-t-3xl px-4 pt-5 pb-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-gray-900">Nota Pembayaran</h2>
               <button onClick={() => setShowNota(false)} className="p-1 text-gray-400">
