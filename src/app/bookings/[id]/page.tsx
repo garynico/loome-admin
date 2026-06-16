@@ -580,19 +580,27 @@ export default function BookingDetailPage() {
 
             <button
               onClick={() => {
-                const docEl = document.documentElement
-                const body = document.body
-                const prevDocH = docEl.style.height
-                const prevBodyH = body.style.height
-                const prevBodyMaxW = body.style.maxWidth
-                docEl.style.height = 'auto'
-                body.style.height = 'auto'
-                body.style.maxWidth = 'none'
-                window.print()
-                window.onafterprint = () => {
-                  docEl.style.height = prevDocH
-                  body.style.height = prevBodyH
-                  body.style.maxWidth = prevBodyMaxW
+                try {
+                  if (typeof window.print !== 'function') {
+                    alert('Browser ini tidak mendukung fitur print. Coba buka di Chrome langsung (bukan dari WhatsApp/Instagram).')
+                    return
+                  }
+                  const docEl = document.documentElement
+                  const body = document.body
+                  const prevDocH = docEl.style.height
+                  const prevBodyH = body.style.height
+                  const prevBodyMaxW = body.style.maxWidth
+                  docEl.style.height = 'auto'
+                  body.style.height = 'auto'
+                  body.style.maxWidth = 'none'
+                  window.print()
+                  window.onafterprint = () => {
+                    docEl.style.height = prevDocH
+                    body.style.height = prevBodyH
+                    body.style.maxWidth = prevBodyMaxW
+                  }
+                } catch (err) {
+                  alert('Gagal mencetak: ' + (err instanceof Error ? err.message : String(err)))
                 }
               }}
               className="mt-5 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base active:opacity-80"
