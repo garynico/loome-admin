@@ -491,9 +491,20 @@ export default function BookingDetailPage() {
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <style>{`
             @media print {
+              @page { margin: 8mm; size: A5 portrait; }
               body * { visibility: hidden !important; }
               #nota-print, #nota-print * { visibility: visible !important; }
-              #nota-print { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; padding: 24px !important; background: white !important; }
+              #nota-print {
+                position: fixed !important;
+                top: 0 !important; left: 0 !important;
+                width: 100% !important;
+                padding: 12px !important;
+                background: white !important;
+                font-size: 11px !important;
+                line-height: 1.35 !important;
+              }
+              #nota-print .print-divider { margin-top: 6px !important; margin-bottom: 6px !important; }
+              #nota-print .print-section { margin-bottom: 6px !important; }
             }
           `}</style>
           <div className="absolute inset-0 bg-black/40 no-print" onClick={() => setShowNota(false)} />
@@ -508,12 +519,12 @@ export default function BookingDetailPage() {
             </div>
 
             <div id="nota-print" className="font-mono text-sm text-gray-900 bg-white">
-              <div className="text-center mb-4">
+              <div className="print-section text-center mb-4">
                 <p className="font-bold text-base tracking-wide">LOOME HAIR REMOVAL</p>
                 <p className="text-xs text-gray-500">Nota Pembayaran</p>
               </div>
-              <div className="border-t border-dashed border-gray-400 my-3" />
-              <div className="space-y-1 mb-3">
+              <div className="print-divider border-t border-dashed border-gray-400 my-3" />
+              <div className="print-section space-y-1 mb-3">
                 <div className="flex gap-2">
                   <span className="text-gray-500 w-20 flex-shrink-0">Nama</span>
                   <span className="flex-1">: {booking.customer?.name}</span>
@@ -537,9 +548,9 @@ export default function BookingDetailPage() {
                   </div>
                 )}
               </div>
-              <div className="border-t border-dashed border-gray-400 my-3" />
+              <div className="print-divider border-t border-dashed border-gray-400 my-3" />
               <p className="text-xs text-gray-500 mb-2">LAYANAN</p>
-              <div className="space-y-1 mb-3">
+              <div className="print-section space-y-1 mb-3">
                 {svcList.map(s => (
                   <div key={s.id} className="flex justify-between">
                     <span className="flex-1 pr-2">{s.name}</span>
@@ -547,8 +558,8 @@ export default function BookingDetailPage() {
                   </div>
                 ))}
               </div>
-              <div className="border-t border-dashed border-gray-400 my-3" />
-              <div className="space-y-1">
+              <div className="print-divider border-t border-dashed border-gray-400 my-3" />
+              <div className="print-section space-y-1">
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
                   <span>{formatPrice(totalPrice)}</span>
@@ -569,8 +580,8 @@ export default function BookingDetailPage() {
                   <p className="text-xs text-purple-600 mt-1">* Menggunakan Paket</p>
                 )}
               </div>
-              <div className="border-t border-dashed border-gray-400 my-3" />
-              <div className="text-center text-xs text-gray-500 space-y-1">
+              <div className="print-divider border-t border-dashed border-gray-400 my-3" />
+              <div className="print-section text-center text-xs text-gray-500 space-y-1">
                 <p>Terima kasih atas kepercayaan Anda!</p>
                 <p>Ref: #{bookingId.slice(-8).toUpperCase()}</p>
                 <p>Dicetak: {format(new Date(), 'd MMM yyyy HH:mm', { locale: id })}</p>
