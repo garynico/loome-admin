@@ -519,48 +519,48 @@ export default function BookingDetailPage() {
               </button>
             </div>
 
-            <div id="nota-print" className="font-mono text-sm text-gray-900 bg-white">
-              <div className="text-center mb-4">
-                <p className="font-bold text-base tracking-wide">LOOME HAIR REMOVAL</p>
-                <p className="text-xs text-gray-500">Nota Pembayaran</p>
+            <div id="nota-print" className="font-mono text-sm text-gray-900 bg-white p-6">
+              <div className="text-center mb-5">
+                <p className="font-bold text-lg tracking-wide">LOOME HAIR REMOVAL</p>
+                <p className="text-xs text-gray-500 mt-1">Nota Pembayaran</p>
               </div>
-              <div className="border-t border-dashed border-gray-400 my-3" />
-              <div className="space-y-1 mb-3">
-                <div className="flex gap-2">
-                  <span className="text-gray-500 w-20 flex-shrink-0">Nama</span>
+              <div className="border-t border-dashed border-gray-400 my-5" />
+              <div className="space-y-2.5 mb-5">
+                <div className="flex gap-3">
+                  <span className="text-gray-500 w-24 flex-shrink-0">Nama</span>
                   <span className="flex-1">: {booking.customer?.name}</span>
                 </div>
                 {booking.customer?.phone && (
-                  <div className="flex gap-2">
-                    <span className="text-gray-500 w-20 flex-shrink-0">Telp</span>
+                  <div className="flex gap-3">
+                    <span className="text-gray-500 w-24 flex-shrink-0">Telp</span>
                     <span className="flex-1">: {booking.customer.phone}</span>
                   </div>
                 )}
                 {dateFormatted && (
-                  <div className="flex gap-2">
-                    <span className="text-gray-500 w-20 flex-shrink-0">Tanggal</span>
+                  <div className="flex gap-3">
+                    <span className="text-gray-500 w-24 flex-shrink-0">Tanggal</span>
                     <span className="flex-1">: {dateFormatted}</span>
                   </div>
                 )}
                 {booking.time && (
-                  <div className="flex gap-2">
-                    <span className="text-gray-500 w-20 flex-shrink-0">Waktu</span>
+                  <div className="flex gap-3">
+                    <span className="text-gray-500 w-24 flex-shrink-0">Waktu</span>
                     <span className="flex-1">: {booking.time.slice(0, 5)}</span>
                   </div>
                 )}
               </div>
-              <div className="border-t border-dashed border-gray-400 my-3" />
-              <p className="text-xs text-gray-500 mb-2">LAYANAN</p>
-              <div className="space-y-1 mb-3">
+              <div className="border-t border-dashed border-gray-400 my-5" />
+              <p className="text-xs text-gray-500 mb-3">LAYANAN</p>
+              <div className="space-y-2.5 mb-5">
                 {svcList.map(s => (
                   <div key={s.id} className="flex justify-between">
-                    <span className="flex-1 pr-2">{s.name}</span>
+                    <span className="flex-1 pr-3">{s.name}</span>
                     <span className="flex-shrink-0">{formatPrice(s.price)}</span>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-dashed border-gray-400 my-3" />
-              <div className="space-y-1">
+              <div className="border-t border-dashed border-gray-400 my-5" />
+              <div className="space-y-2.5">
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
                   <span>{formatPrice(totalPrice)}</span>
@@ -578,11 +578,11 @@ export default function BookingDetailPage() {
                   </>
                 )}
                 {booking.customer_package_id && (
-                  <p className="text-xs text-purple-600 mt-1">* Menggunakan Paket</p>
+                  <p className="text-xs text-purple-600 mt-2">* Menggunakan Paket</p>
                 )}
               </div>
-              <div className="border-t border-dashed border-gray-400 my-3" />
-              <div className="text-center text-xs text-gray-500 space-y-1">
+              <div className="border-t border-dashed border-gray-400 my-5" />
+              <div className="text-center text-xs text-gray-500 space-y-1.5">
                 <p>Terima kasih atas kepercayaan Anda!</p>
                 <p>Ref: #{bookingId.slice(-8).toUpperCase()}</p>
                 <p>Dicetak: {format(new Date(), 'd MMM yyyy HH:mm', { locale: id })}</p>
