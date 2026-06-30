@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { format, parseISO, isToday, isTomorrow, addDays } from 'date-fns'
 import { id } from 'date-fns/locale'
+import { toPng } from 'html-to-image'
 import type { BookingWithRelations, CustomerPackage } from '@/types'
 import BottomNav from '@/components/BottomNav'
 import Image from 'next/image'
@@ -35,6 +36,38 @@ export default function OrdersPage() {
   const [riwayatExpanded, setRiwayatExpanded] = useState(false)
   const [pkgHistoryExpanded, setPkgHistoryExpanded] = useState(false)
   const [search, setSearch] = useState('')
+  const [showNotaPkg, setShowNotaPkg] = useState(false)
+  const [notaPkg, setNotaPkg] = useState<CustomerPackage | null>(null)
+  const [savingNotaPkg, setSavingNotaPkg] = useState(false)
+
+  async function sendNotaPkgImage() {
+    const node = document.getElementById('nota-pkg-print')
+    if (!node || !notaPkg) return
+    setSavingNotaPkg(true)
+    try {
+      const dataUrl = await toPng(node, { backgroundColor: '#ffffff', pixelRatio: 2 })
+      const fileName = `nota-paket-${notaPkg.id.slice(-8).toUpperCase()}.png`
+      const blob = await (await fetch(dataUrl)).blob()
+      const file = new File([blob], fileName, { type: 'image/png' })
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Nota Pembelian Paket',
+          text: `Nota pembelian paket untuk ${notaPkg.customer?.name ?? ''}`,
+        })
+      } else {
+        const link = document.createElement('a')
+        link.download = fileName
+        link.href = dataUrl
+        link.click()
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      alert('Gagal mengirim nota: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setSavingNotaPkg(false)
+    }
+  }
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -327,6 +360,14 @@ export default function OrdersPage() {
                           }}>
                           {cp.status === 'active' ? (cp.sessions_used === 0 ? 'Belum Dipakai' : 'Aktif') : cp.status === 'cancelled' ? 'Dibatalkan' : 'Selesai'}
                         </span>
+                        {cp.status !== 'cancelled' && (
+                          <button
+                            onClick={e => { e.stopPropagation(); setNotaPkg(cp); setShowNotaPkg(true) }}
+                            className="text-[10px] text-[#2D5A3D] font-medium active:opacity-60"
+                          >
+                            Cetak Nota
+                          </button>
+                        )}
                         {cp.status === 'active' && cp.sessions_used === 0 && (
                           <button
                             onClick={e => { e.stopPropagation(); cancelPackage(cp.id, cp.package_name) }}
@@ -731,6 +772,84 @@ export default function OrdersPage() {
           </div>
         )}
       </div>
+
+      {showNotaPkg && notaPkg && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowNotaPkg(false)} />
+          <div className="relative z-10 bg-white rounded-t-3xl px-4 pt-5 pb-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-gray-900">Nota Pembelian Paket</h2>
+              <button onClick={() => setShowNotaPkg(false)} className="p-1 text-gray-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div id="nota-pkg-print" className="font-mono text-sm text-gray-900 bg-white p-6">
+              <div className="text-center mb-5">
+                <p className="font-bold text-lg tracking-wide">LOOME HAIR REMOVAL</p>
+                <p className="text-xs text-gray-500 mt-1">Nota Pembelian Paket</p>
+              </div>
+              <div className="border-t border-dashed border-gray-400 my-5" />
+              <div className="space-y-2.5 mb-5">
+                <div className="flex gap-3">
+                  <span className="text-gray-500 w-24 flex-shrink-0">Nama</span>
+                  <span className="flex-1">: {notaPkg.customer?.name}</span>
+                </div>
+                {notaPkg.customer?.phone && (
+                  <div className="flex gap-3">
+                    <span className="text-gray-500 w-24 flex-shrink-0">Telp</span>
+                    <span className="flex-1">: {notaPkg.customer.phone}</span>
+                  </div>
+                )}
+                <div className="flex gap-3">
+                  <span className="text-gray-500 w-24 flex-shrink-0">Tanggal</span>
+                  <span className="flex-1">: {format(parseISO(notaPkg.purchased_at.slice(0, 10)), 'd MMM yyyy', { locale: id })}</span>
+                </div>
+              </div>
+              <div className="border-t border-dashed border-gray-400 my-5" />
+              <p className="text-xs text-gray-500 mb-3">PAKET</p>
+              <div className="space-y-2.5 mb-5">
+                <div className="flex justify-between">
+                  <span className="flex-1 pr-3">{notaPkg.package_name}</span>
+                  <span className="flex-shrink-0">{formatPrice(notaPkg.paid_price)}</span>
+                </div>
+                {notaPkg.service?.name && (
+                  <div className="text-xs text-gray-500">{notaPkg.service.name}</div>
+                )}
+                <div className="text-xs text-gray-500">{notaPkg.sessions_total} sesi</div>
+              </div>
+              <div className="border-t border-dashed border-gray-400 my-5" />
+              <div className="flex justify-between font-bold">
+                <span>Total</span>
+                <span>{formatPrice(notaPkg.paid_price)}</span>
+              </div>
+              <div className="border-t border-dashed border-gray-400 my-5" />
+              <div className="text-center text-xs text-gray-500 space-y-1.5">
+                <p>Terima kasih atas kepercayaan Anda!</p>
+                <p>Ref: #{notaPkg.id.slice(-8).toUpperCase()}</p>
+                <p>Dicetak: {format(new Date(), 'd MMM yyyy HH:mm', { locale: id })}</p>
+              </div>
+            </div>
+
+            <button
+              onClick={sendNotaPkgImage}
+              disabled={savingNotaPkg}
+              className="mt-5 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base active:opacity-80 disabled:opacity-50"
+            >
+              {savingNotaPkg ? (
+                <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342a4 4 0 100-2.684m0 2.684a4 4 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a4 4 0 105.367-5.367 4 4 0 00-5.367 5.367zm0 11.316a4 4 0 105.367 5.367 4 4 0 00-5.367-5.367z" />
+                </svg>
+              )}
+              {savingNotaPkg ? 'Mengirim...' : 'Kirim Nota'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <BottomNav active="orders" />
     </div>
