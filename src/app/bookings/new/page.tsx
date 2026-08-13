@@ -49,6 +49,7 @@ function NewBookingForm() {
   const [services, setServices] = useState<Service[]>([])
   const [serviceIds, setServiceIds] = useState<string[]>([])
   const [servicesExpanded, setServicesExpanded] = useState(false)
+  const [serviceSearch, setServiceSearch] = useState('')
   const SERVICES_PREVIEW = 4
 
   // package
@@ -90,11 +91,15 @@ function NewBookingForm() {
   const relevantServices = effectiveGender
     ? services.filter(s => s.gender_target === 'all' || s.gender_target === effectiveGender)
     : services
-  // Always include already-selected services even if filtered out
-  const visibleServices = servicesExpanded
-    ? relevantServices
-    : relevantServices.slice(0, SERVICES_PREVIEW)
-  const hiddenCount = relevantServices.length - SERVICES_PREVIEW
+  const isSearching = serviceSearch.trim().length > 0
+  const searchedServices = isSearching
+    ? relevantServices.filter(s => s.name.toLowerCase().includes(serviceSearch.trim().toLowerCase()))
+    : relevantServices
+  // Always include already-selected services even if filtered out; skip the preview cap while searching
+  const visibleServices = isSearching || servicesExpanded
+    ? searchedServices
+    : searchedServices.slice(0, SERVICES_PREVIEW)
+  const hiddenCount = isSearching ? 0 : searchedServices.length - SERVICES_PREVIEW
 
   useEffect(() => {
     fetch('/api/services').then(r => r.json()).then(setServices)
@@ -142,6 +147,7 @@ function NewBookingForm() {
     setShowCustomerList(false)
     setCustomerListSearch('')
     setServicesExpanded(false)
+    setServiceSearch('')
     setServiceIds([])
     setUsePackageId(null)
     setPriceEditing(false)
@@ -427,6 +433,31 @@ function NewBookingForm() {
                 </span>
               )}
             </div>
+            {relevantServices.length > SERVICES_PREVIEW && (
+              <div className="relative mb-2">
+                <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={serviceSearch}
+                  onChange={e => setServiceSearch(e.target.value)}
+                  className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D5A3D]"
+                  placeholder="Cari layanan..."
+                />
+                {serviceSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setServiceSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 active:text-gray-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            )}
             <div className="space-y-2">
               {visibleServices.map(s => {
                 const selected = serviceIds.includes(s.id)
@@ -469,6 +500,9 @@ function NewBookingForm() {
                     <>Belum ada layanan.{' '}<button type="button" onClick={() => router.push('/services/new')} className="text-[#2D5A3D] font-medium">Tambah dulu</button></>
                   ) : 'Tidak ada layanan untuk gender ini.'}
                 </p>
+              )}
+              {relevantServices.length > 0 && isSearching && searchedServices.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-4">Tidak ada layanan "{serviceSearch}"</p>
               )}
             </div>
             {hiddenCount > 0 && (
