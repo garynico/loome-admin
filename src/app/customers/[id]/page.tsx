@@ -366,7 +366,10 @@ export default function CustomerProfilePage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900 truncate">{cp.package_name}</p>
-                        {cp.service?.name && <p className="text-xs text-gray-500 mt-0.5">{cp.service.name}</p>}
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {cp.service?.name ? `${cp.service.name} · ` : ''}
+                          Dibeli {format(parseISO(cp.purchased_at.slice(0, 10)), 'd MMM yyyy', { locale: id })}
+                        </p>
                       </div>
                       <span className="text-sm font-bold text-[#2D5A3D] flex-shrink-0">{remaining} sesi</span>
                     </div>
