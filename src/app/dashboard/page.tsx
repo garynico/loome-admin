@@ -408,19 +408,19 @@ export default function DashboardPage() {
               <p className="text-sm font-bold text-gray-900">Tren 6 Bulan</p>
               <p className="text-xs text-gray-400">Total: {formatShort(trendData.reduce((s, d) => s + d.revenue, 0))}</p>
             </div>
-            <div className="flex items-end gap-1.5 h-28">
+            <div className="flex items-end gap-1.5 h-32">
               {trendData.map(({ month, revenue }) => {
-                const heightPct = revenue > 0 ? Math.max((revenue / maxTrend) * 100, 4) : 4
+                const heightPx = revenue > 0 ? Math.max((revenue / maxTrend) * 72, 4) : 4
                 const isSelected = month === selectedMonth
                 const label = format(new Date(month + '-01'), 'MMM', { locale: id })
                 return (
                   <button key={month} onClick={() => { setSelectedMonth(month); setTxnExpanded(false) }}
-                    className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-semibold" style={{ color: isSelected ? '#2D5A3D' : 'transparent' }}>
+                    className="flex-1 flex flex-col items-center justify-end h-full gap-1">
+                    <span className="text-[9px] font-semibold" style={{ color: isSelected ? '#2D5A3D' : '#9ca3af' }}>
                       {formatShort(revenue)}
                     </span>
                     <div className="w-full rounded-t-lg transition-all"
-                      style={{ height: `${heightPct}%`, background: isSelected ? '#2D5A3D' : '#E8F0EA', minHeight: '4px' }} />
+                      style={{ height: `${heightPx}px`, background: isSelected ? '#2D5A3D' : '#E8F0EA', minHeight: '4px' }} />
                     <span className="text-[10px] font-medium capitalize"
                       style={{ color: isSelected ? '#2D5A3D' : '#9ca3af' }}>
                       {label}
