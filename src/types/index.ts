@@ -38,7 +38,7 @@ export interface CustomerPackage {
   sessions_total: number
   sessions_used: number
   paid_price: number
-  status: 'active' | 'completed' | 'cancelled'
+  status: 'active' | 'completed' | 'cancelled' | 'expired'
   purchased_at: string
   notes: string | null
   service?: Service

@@ -49,7 +49,7 @@ CREATE TABLE customer_packages (
   sessions_total INTEGER NOT NULL,
   sessions_used INTEGER NOT NULL DEFAULT 0,
   paid_price INTEGER NOT NULL,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled', 'expired')),
   purchased_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   notes TEXT
 );
@@ -93,7 +93,8 @@ ALTER TABLE bookings DISABLE ROW LEVEL SECURITY;
 -- reconfirmed/deleted/reassigned against a package (delta = +1 to consume
 -- a session, -1 to give one back). Clamped to [0, sessions_total] and
 -- flips status to 'completed' once all sessions are used (and back to
--- 'active' if a session is returned to a completed package).
+-- 'active' if a session is returned to a completed package). Packages
+-- manually marked 'cancelled' or 'expired' by an admin are left alone.
 CREATE OR REPLACE FUNCTION adjust_package_sessions(pkg_id UUID, delta INTEGER)
 RETURNS VOID AS $$
 BEGIN
@@ -101,7 +102,7 @@ BEGIN
   SET
     sessions_used = LEAST(GREATEST(sessions_used + delta, 0), sessions_total),
     status = CASE
-      WHEN status = 'cancelled' THEN status
+      WHEN status IN ('cancelled', 'expired') THEN status
       WHEN LEAST(GREATEST(sessions_used + delta, 0), sessions_total) >= sessions_total THEN 'completed'
       ELSE 'active'
     END

@@ -93,6 +93,20 @@ export default function OrdersPage() {
     }
   }
 
+  async function expirePackage(cpId: string, name: string) {
+    if (!confirm(`Tandai paket "${name}" sebagai kadaluarsa? Sesi yang tersisa tidak bisa dipakai lagi.`)) return
+    setAllPurchases(prev => prev.map(cp => cp.id === cpId ? { ...cp, status: 'expired' } : cp))
+    const res = await fetch(`/api/customer-packages/${cpId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'expired' }),
+    })
+    if (!res.ok) {
+      setAllPurchases(prev => prev.map(cp => cp.id === cpId ? { ...cp, status: 'active' } : cp))
+      alert('Gagal menandai paket kadaluarsa. Coba lagi.')
+    }
+  }
+
   async function deletePackage(cpId: string, name: string) {
     if (!confirm(`Hapus riwayat paket "${name}"? Data tidak bisa dikembalikan dan akan hilang dari revenue.`)) return
     const snapshot = allPurchases.find(cp => cp.id === cpId)
@@ -345,7 +359,7 @@ export default function OrdersPage() {
                     key={cp.id}
                     onClick={() => router.push(`/customers/${cp.customer_id}`)}
                     className="p-4 rounded-2xl border cursor-pointer active:opacity-80"
-                    style={{ borderColor: cp.status === 'cancelled' ? '#fecaca' : cp.status === 'completed' ? '#e5e7eb' : '#d1fae5' }}
+                    style={{ borderColor: cp.status === 'cancelled' ? '#fecaca' : cp.status === 'expired' ? '#fde68a' : cp.status === 'completed' ? '#e5e7eb' : '#d1fae5' }}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -355,10 +369,10 @@ export default function OrdersPage() {
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                           style={{
-                            background: cp.status === 'active' ? '#dcfce7' : cp.status === 'cancelled' ? '#fee2e2' : '#f3f4f6',
-                            color: cp.status === 'active' ? '#16a34a' : cp.status === 'cancelled' ? '#ef4444' : '#9ca3af',
+                            background: cp.status === 'active' ? '#dcfce7' : cp.status === 'cancelled' ? '#fee2e2' : cp.status === 'expired' ? '#fef3c7' : '#f3f4f6',
+                            color: cp.status === 'active' ? '#16a34a' : cp.status === 'cancelled' ? '#ef4444' : cp.status === 'expired' ? '#d97706' : '#9ca3af',
                           }}>
-                          {cp.status === 'active' ? (cp.sessions_used === 0 ? 'Belum Dipakai' : 'Aktif') : cp.status === 'cancelled' ? 'Dibatalkan' : 'Selesai'}
+                          {cp.status === 'active' ? (cp.sessions_used === 0 ? 'Belum Dipakai' : 'Aktif') : cp.status === 'cancelled' ? 'Dibatalkan' : cp.status === 'expired' ? 'Kadaluarsa' : 'Selesai'}
                         </span>
                         {cp.status !== 'cancelled' && (
                           <button
@@ -374,6 +388,14 @@ export default function OrdersPage() {
                             className="text-[10px] text-red-400 font-medium active:text-red-600"
                           >
                             Batalkan
+                          </button>
+                        )}
+                        {cp.status === 'active' && (
+                          <button
+                            onClick={e => { e.stopPropagation(); expirePackage(cp.id, cp.package_name) }}
+                            className="text-[10px] text-amber-500 font-medium active:text-amber-700"
+                          >
+                            Kadaluarsa
                           </button>
                         )}
                         {cp.status !== 'active' && (
@@ -399,7 +421,7 @@ export default function OrdersPage() {
                           <div className="h-full rounded-full transition-all"
                             style={{
                               width: `${pct}%`,
-                              background: cp.status === 'completed' ? '#9ca3af' : pct >= 80 ? '#f97316' : '#2D5A3D',
+                              background: cp.status === 'completed' || cp.status === 'expired' ? '#9ca3af' : pct >= 80 ? '#f97316' : '#2D5A3D',
                             }} />
                         </div>
                       </div>
