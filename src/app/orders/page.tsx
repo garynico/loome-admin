@@ -15,6 +15,10 @@ function formatPrice(price: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price)
 }
 
+function formatCreatedAt(dateStr: string) {
+  return format(parseISO(dateStr), 'd MMM, HH:mm', { locale: id })
+}
+
 const statusLabels: Record<string, string> = {
   confirmed: 'Konfirmasi',
   completed: 'Selesai',
@@ -538,6 +542,7 @@ export default function OrdersPage() {
                               {formatPrice((total ?? 0) + (booking.linked_package?.paid_price ?? 0))}
                             </p>
                           )}
+                          <p className="text-[10px] text-gray-400 mt-0.5">Dibuat {formatCreatedAt(booking.created_at)}</p>
                         </div>
                         <span className="flex-shrink-0 text-xs font-semibold text-orange-500 bg-white border border-orange-200 px-2.5 py-1 rounded-full">
                           Atur Jadwal
@@ -621,6 +626,7 @@ export default function OrdersPage() {
                               </>
                             )
                           })()}
+                          <p className="text-[10px] text-gray-400 mt-0.5">Dibuat {formatCreatedAt(booking.created_at)}</p>
                         </div>
                         {booking.status === 'confirmed' ? (
                           <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -714,6 +720,7 @@ export default function OrdersPage() {
                                   {formatPrice((total ?? 0) + (booking.linked_package?.paid_price ?? 0))}
                                 </p>
                               )}
+                              <p className="text-[10px] text-gray-400 mt-0.5">Dibuat {formatCreatedAt(booking.created_at)}</p>
                             </div>
                             <button
                               onClick={e => { e.stopPropagation(); markCompleted(booking.id) }}
@@ -785,6 +792,7 @@ export default function OrdersPage() {
                                   ? booking.services.map(s => s.name).join(', ')
                                   : (booking.service?.name ?? 'Layanan dihapus')}
                               </p>
+                              <p className="text-[10px] text-gray-400 mt-0.5">Dibuat {formatCreatedAt(booking.created_at)}</p>
                             </div>
                             <div className="flex flex-col items-end gap-1 flex-shrink-0">
                               <span
