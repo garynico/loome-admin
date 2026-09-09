@@ -168,21 +168,32 @@ export default function DashboardPage() {
     }
   }, [bookings, pkgPurchases, selectedMonth])
 
+  // Bookings that bundled a brand-new package purchase into the same order —
+  // that package purchase should render merged into the booking's entry
+  // below, not as its own separate transaction.
+  const linkedPackageIds = useMemo(() =>
+    new Set(bookings.filter(b => b.status === 'completed' && b.linked_package).map(b => b.linked_package!.id)),
+  [bookings])
+
   // Combined transaction list for selected month, newest first
   const transactions = useMemo(() => {
     const bookingTxns = bookings
       .filter(b => b.status === 'completed' && b.date?.startsWith(selectedMonth))
-      .map(b => ({
-        id: b.id,
-        type: 'booking' as const,
-        customerName: b.customer?.name ?? '—',
-        label: (b.services?.length ? b.services.map(s => s.name).join(', ') : b.service?.name) ?? 'Layanan',
-        amount: bookingTotal(b),
-        date: b.date!,
-        sortKey: b.date! + (b.time ?? '99:99'),
-      }))
+      .map(b => {
+        const svcLabel = (b.services?.length ? b.services.map(s => s.name).join(', ') : b.service?.name) ?? 'Layanan'
+        const label = b.linked_package ? `${svcLabel} + Beli Paket: ${b.linked_package.package_name}` : svcLabel
+        return {
+          id: b.id,
+          type: 'booking' as const,
+          customerName: b.customer?.name ?? '—',
+          label,
+          amount: bookingTotal(b) + (b.linked_package?.paid_price ?? 0),
+          date: b.date!,
+          sortKey: b.date! + (b.time ?? '99:99'),
+        }
+      })
     const pkgTxns = pkgPurchases
-      .filter(p => p.purchased_at.startsWith(selectedMonth) && p.status !== 'cancelled')
+      .filter(p => p.purchased_at.startsWith(selectedMonth) && p.status !== 'cancelled' && !linkedPackageIds.has(p.id))
       .map(p => ({
         id: p.id,
         type: 'package' as const,
@@ -193,7 +204,7 @@ export default function DashboardPage() {
         sortKey: p.purchased_at,
       }))
     return [...bookingTxns, ...pkgTxns].sort((a, b) => b.sortKey.localeCompare(a.sortKey))
-  }, [bookings, pkgPurchases, selectedMonth])
+  }, [bookings, pkgPurchases, selectedMonth, linkedPackageIds])
 
   const TXN_PREVIEW = 5
   const visibleTxns = txnExpanded ? transactions : transactions.slice(0, TXN_PREVIEW)

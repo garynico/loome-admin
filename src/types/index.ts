@@ -55,6 +55,7 @@ export interface Booking {
   custom_price: number | null
   dp_amount: number
   customer_package_id: string | null
+  linked_package_id: string | null
   date: string | null
   time: string | null
   duration_minutes: number | null
@@ -67,4 +68,5 @@ export interface BookingWithRelations extends Booking {
   customer: Customer
   service: Service | null
   services: Service[]
+  linked_package?: { id: string; package_name: string; paid_price: number } | null
 }

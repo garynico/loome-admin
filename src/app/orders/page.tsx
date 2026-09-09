@@ -530,7 +530,14 @@ export default function OrdersPage() {
                           <p className="text-xs text-gray-500 mt-0.5 truncate">
                             {svcList.length ? svcList.map(s => s.name).join(', ') : 'Layanan dihapus'}
                           </p>
-                          {total && <p className="text-xs font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(total)}</p>}
+                          {booking.linked_package && (
+                            <p className="text-[11px] text-amber-600 mt-0.5 truncate">+ Beli Paket: {booking.linked_package.package_name}</p>
+                          )}
+                          {(total || booking.linked_package) && (
+                            <p className="text-xs font-semibold text-[#2D5A3D] mt-0.5">
+                              {formatPrice((total ?? 0) + (booking.linked_package?.paid_price ?? 0))}
+                            </p>
+                          )}
                         </div>
                         <span className="flex-shrink-0 text-xs font-semibold text-orange-500 bg-white border border-orange-200 px-2.5 py-1 rounded-full">
                           Atur Jadwal
@@ -595,17 +602,23 @@ export default function OrdersPage() {
                           {(() => {
                             const svcList = booking.services?.length ? booking.services : booking.service ? [booking.service] : []
                             const total = booking.custom_price ?? (svcList.length ? svcList.reduce((s, x) => s + x.price, 0) : null)
-                            if (!total) return null
-                            const remaining = booking.dp_amount > 0 ? total - booking.dp_amount : 0
+                            const linkedPkg = booking.linked_package
+                            if (!total && !linkedPkg) return null
+                            const remaining = booking.dp_amount > 0 ? (total ?? 0) - booking.dp_amount : 0
                             return (
-                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                <p className="text-xs font-semibold text-[#2D5A3D]">{formatPrice(total)}</p>
-                                {booking.dp_amount > 0 && booking.status !== 'completed' && (
-                                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-600">
-                                    Sisa {formatPrice(remaining)}
-                                  </span>
+                              <>
+                                {linkedPkg && (
+                                  <p className="text-[11px] text-amber-600 mt-0.5 truncate">+ Beli Paket: {linkedPkg.package_name}</p>
                                 )}
-                              </div>
+                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                  <p className="text-xs font-semibold text-[#2D5A3D]">{formatPrice((total ?? 0) + (linkedPkg?.paid_price ?? 0))}</p>
+                                  {booking.dp_amount > 0 && booking.status !== 'completed' && (
+                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-600">
+                                      Sisa {formatPrice(remaining)}
+                                    </span>
+                                  )}
+                                </div>
+                              </>
                             )
                           })()}
                         </div>
@@ -693,7 +706,14 @@ export default function OrdersPage() {
                               <p className="text-xs text-gray-500 mt-0.5 truncate">
                                 {svcList.length ? svcList.map(s => s.name).join(', ') : 'Layanan dihapus'}
                               </p>
-                              {total && <p className="text-xs font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(total)}</p>}
+                              {booking.linked_package && (
+                                <p className="text-[11px] text-amber-600 mt-0.5 truncate">+ Beli Paket: {booking.linked_package.package_name}</p>
+                              )}
+                              {(total || booking.linked_package) && (
+                                <p className="text-xs font-semibold text-[#2D5A3D] mt-0.5">
+                                  {formatPrice((total ?? 0) + (booking.linked_package?.paid_price ?? 0))}
+                                </p>
+                              )}
                             </div>
                             <button
                               onClick={e => { e.stopPropagation(); markCompleted(booking.id) }}

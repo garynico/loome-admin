@@ -63,6 +63,11 @@ CREATE TABLE bookings (
   custom_price INTEGER,
   dp_amount INTEGER NOT NULL DEFAULT 0,
   customer_package_id UUID REFERENCES customer_packages(id) ON DELETE SET NULL,
+  -- Set when a brand-new package was purchased as part of this same order
+  -- (e.g. buying a package and booking an unrelated single service in one
+  -- visit). Distinct from customer_package_id, which means this booking's
+  -- service was paid for by consuming a session from that package.
+  linked_package_id UUID REFERENCES customer_packages(id) ON DELETE SET NULL,
   date DATE,
   time TIME,
   duration_minutes INTEGER,
@@ -75,6 +80,7 @@ CREATE TABLE bookings (
 CREATE INDEX idx_bookings_date ON bookings(date);
 CREATE INDEX idx_bookings_customer_id ON bookings(customer_id);
 CREATE INDEX idx_bookings_customer_package_id ON bookings(customer_package_id);
+CREATE INDEX idx_bookings_linked_package_id ON bookings(linked_package_id);
 CREATE INDEX idx_customers_name ON customers(name);
 CREATE INDEX idx_customers_phone ON customers(phone);
 CREATE INDEX idx_customer_packages_customer_id ON customer_packages(customer_id);

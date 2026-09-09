@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('bookings')
-    .select('*, customer:customers(*), service:services(*)')
+    .select('*, customer:customers(*), service:services(*), linked_package:customer_packages!linked_package_id(id, package_name, paid_price)')
     .order('date')
     .order('time')
 
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'customer_id and at least one service are required' }, { status: 400 })
   }
 
-  const { customer_package_id } = body
+  const { customer_package_id, linked_package_id } = body
 
   const { data, error } = await supabase
     .from('bookings')
@@ -70,8 +70,9 @@ export async function POST(req: NextRequest) {
       custom_price: custom_price ?? null,
       dp_amount: dp_amount ?? 0,
       customer_package_id: customer_package_id || null,
+      linked_package_id: linked_package_id || null,
     })
-    .select('*, customer:customers(*), service:services(*)')
+    .select('*, customer:customers(*), service:services(*), linked_package:customer_packages!linked_package_id(id, package_name, paid_price)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
