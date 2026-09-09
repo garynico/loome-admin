@@ -63,7 +63,7 @@ function NewBookingForm() {
   const [buyPriceRaw, setBuyPriceRaw] = useState('')
   const [buyNotes, setBuyNotes] = useState('')
   const [buyingSaving, setBuyingSaving] = useState(false)
-  const [newlyBoughtPackageId, setNewlyBoughtPackageId] = useState<string | null>(null)
+  const [newlyBoughtPackageIds, setNewlyBoughtPackageIds] = useState<string[]>([])
 
   // price override
   const [priceEditing, setPriceEditing] = useState(false)
@@ -160,7 +160,7 @@ function NewBookingForm() {
     setServiceSearch('')
     setServiceIds([])
     setUsePackageId(null)
-    setNewlyBoughtPackageId(null)
+    setNewlyBoughtPackageIds([])
     setPriceEditing(false)
   }
 
@@ -210,7 +210,7 @@ function NewBookingForm() {
     if (res.ok) {
       const newPkg = await res.json()
       setCustomerPackages(prev => [...prev, newPkg])
-      setNewlyBoughtPackageId(newPkg.id)
+      setNewlyBoughtPackageIds(prev => [...prev, newPkg.id])
       setShowBuyPackage(false)
     }
     setBuyingSaving(false)
@@ -229,38 +229,40 @@ function NewBookingForm() {
   const finalPrice = priceEditing && Number(customPriceRaw) > 0 ? Number(customPriceRaw) : null
   const displayTotal = finalPrice ?? calculatedTotal
 
-  // A package bought in this session is a line item on the same order
+  // Every package bought in this session is a line item on the same order
   // regardless of whether it's also used to cover today's service — either
-  // way the customer owes the package price, so it's surfaced in the
-  // summary below so the total reflects the whole order, not just the visit.
-  const linkedPkgForSummary = newlyBoughtPackageId
-    ? customerPackages.find(cp => cp.id === newlyBoughtPackageId) ?? null
-    : null
-  const grandTotal = displayTotal + (linkedPkgForSummary?.paid_price ?? 0)
+  // way the customer owes the package price, so all of them are surfaced in
+  // the summary below so the total reflects the whole order, not just the visit.
+  const newlyBoughtPackages = newlyBoughtPackageIds
+    .map(id => customerPackages.find(cp => cp.id === id))
+    .filter((cp): cp is CustomerPackage => !!cp)
+  const newlyBoughtTotal = newlyBoughtPackages.reduce((sum, cp) => sum + cp.paid_price, 0)
+  const grandTotal = displayTotal + newlyBoughtTotal
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!customerId) { setError('Pilih pelanggan terlebih dahulu'); return }
-    if (serviceIds.length === 0 && !newlyBoughtPackageId) {
+    if (serviceIds.length === 0 && newlyBoughtPackageIds.length === 0) {
       setError('Pilih minimal satu layanan, atau beli paket terlebih dahulu')
       return
     }
     setLoading(true)
     setError('')
 
-    // Package-only order: the purchase already saved the moment it was
+    const newlyBoughtNames = newlyBoughtPackages.map(cp => cp.package_name).join(', ') || null
+
+    // Package-only order: the purchase(s) already saved the moment they were
     // bought above — there's no visit to schedule, so just confirm it.
-    if (serviceIds.length === 0 && newlyBoughtPackageId) {
-      const pkg = customerPackages.find(cp => cp.id === newlyBoughtPackageId)
+    if (serviceIds.length === 0 && newlyBoughtPackageIds.length > 0) {
       setSavedBooking({
         id: null,
         customerName,
         customerPhone: '',
         serviceNames: [],
-        totalPrice: pkg?.paid_price ?? 0,
+        totalPrice: newlyBoughtTotal,
         date: null,
         time: null,
-        linkedPackageName: pkg?.package_name ?? null,
+        linkedPackageName: newlyBoughtNames,
       })
       setLoading(false)
       return
@@ -279,7 +281,11 @@ function NewBookingForm() {
         custom_price: displayTotal,
         dp_amount: hasDp && Number(dpRaw) > 0 ? Number(dpRaw) : 0,
         customer_package_id: usePackageId ?? null,
-        linked_package_id: newlyBoughtPackageId ?? null,
+        // The DB only links one package purchase per booking — if more than
+        // one was bought this session, the rest still exist as their own
+        // customer_packages rows (and are still totalled below), they just
+        // won't show merged into this booking's card in Pesanan/Dashboard.
+        linked_package_id: newlyBoughtPackageIds[0] ?? null,
       }),
     })
 
@@ -291,10 +297,10 @@ function NewBookingForm() {
         customerPhone: booking.customer?.phone ?? '',
         serviceNames: (booking.services as Service[])?.map((s: Service) => s.name) ?? selectedServices.map(s => s.name),
         totalPrice: (booking.custom_price ?? (booking.services as Service[])?.reduce((s: number, x: Service) => s + x.price, 0) ?? calculatedTotal)
-          + (booking.linked_package?.paid_price ?? 0),
+          + newlyBoughtTotal,
         date: booking.date,
         time: booking.time,
-        linkedPackageName: booking.linked_package?.package_name ?? null,
+        linkedPackageName: newlyBoughtNames,
       })
     } else {
       const data = await res.json()
@@ -514,7 +520,7 @@ function NewBookingForm() {
                       </div>
                       {selected ? (
                         <span className="text-[10px] font-bold text-[#2D5A3D] bg-white px-2 py-1 rounded-full flex-shrink-0">Aktif</span>
-                      ) : cp.id === newlyBoughtPackageId ? (
+                      ) : newlyBoughtPackageIds.includes(cp.id) ? (
                         <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full flex-shrink-0">Baru Dibeli</span>
                       ) : (
                         <span className="text-[10px] font-medium text-gray-400 flex-shrink-0">Gunakan</span>
@@ -780,7 +786,7 @@ function NewBookingForm() {
           )}
 
           {/* Summary */}
-          {customerId && (serviceIds.length > 0 || linkedPkgForSummary) && (
+          {customerId && (serviceIds.length > 0 || newlyBoughtPackages.length > 0) && (
             <div className="p-4 rounded-2xl bg-[#E8F0EA]">
               <p className="text-xs font-semibold text-[#2D5A3D] uppercase tracking-wide mb-2">Ringkasan</p>
               <p className="text-sm font-semibold text-gray-900">{customerName}</p>
@@ -794,15 +800,15 @@ function NewBookingForm() {
                   )}
                 </div>
               ))}
-              {linkedPkgForSummary && (
-                <div className="flex justify-between text-sm text-gray-700 mt-0.5">
-                  <span>Beli Paket: {linkedPkgForSummary.package_name}</span>
-                  <span>{formatPrice(linkedPkgForSummary.paid_price)}</span>
+              {newlyBoughtPackages.map(cp => (
+                <div key={cp.id} className="flex justify-between text-sm text-gray-700 mt-0.5">
+                  <span>Beli Paket: {cp.package_name}</span>
+                  <span>{formatPrice(cp.paid_price)}</span>
                 </div>
-              )}
-              {(linkedPkgForSummary || (priceEditing && displayTotal !== calculatedTotal) || selectedServices.length > 1) && (
+              ))}
+              {(newlyBoughtPackages.length > 0 || (priceEditing && displayTotal !== calculatedTotal) || selectedServices.length > 1) && (
                 <div className="flex justify-between text-sm font-semibold text-[#2D5A3D] mt-1 pt-1 border-t border-[#2D5A3D]/20">
-                  <span>{linkedPkgForSummary ? 'Total Pesanan' : priceEditing && displayTotal !== calculatedTotal ? 'Total (diedit)' : 'Total'}</span>
+                  <span>{newlyBoughtPackages.length > 0 ? 'Total Pesanan' : priceEditing && displayTotal !== calculatedTotal ? 'Total (diedit)' : 'Total'}</span>
                   <span>{formatPrice(grandTotal)}</span>
                 </div>
               )}
@@ -825,7 +831,7 @@ function NewBookingForm() {
 
           <button
             type="submit"
-            disabled={loading || !customerId || (serviceIds.length === 0 && !newlyBoughtPackageId)}
+            disabled={loading || !customerId || (serviceIds.length === 0 && newlyBoughtPackageIds.length === 0)}
             className="w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base disabled:opacity-40 active:opacity-80"
           >
             {loading ? 'Menyimpan...' : serviceIds.length === 0 ? 'Selesaikan Pembelian Paket' : 'Simpan Janji'}
