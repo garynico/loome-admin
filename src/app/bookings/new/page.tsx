@@ -787,7 +787,11 @@ function NewBookingForm() {
               {selectedServices.map(s => (
                 <div key={s.id} className="flex justify-between text-sm text-gray-700 mt-0.5">
                   <span>{s.name}</span>
-                  <span>{formatPrice(s.price)}</span>
+                  {s.id === coveredServiceId ? (
+                    <span className="text-xs font-bold text-green-600">GRATIS</span>
+                  ) : (
+                    <span>{formatPrice(s.price)}</span>
+                  )}
                 </div>
               ))}
               {linkedPkgForSummary && (
