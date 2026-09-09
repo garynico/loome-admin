@@ -399,56 +399,119 @@ export default function CustomerProfilePage() {
           </div>
         )}
 
-        {/* Session history */}
+        {/* Session history — bookings and package purchases merged, newest first */}
         <div className="px-4 py-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Riwayat Kunjungan</h3>
-          {bookings.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">Belum ada kunjungan</p>
-          ) : (
-            <div className="space-y-2">
-              {bookings.map(b => (
-                <button
-                  key={b.id}
-                  onClick={() => router.push(`/bookings/${b.id}`)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 active:bg-gray-50 text-left"
-                >
-                  <div className="flex flex-col items-center w-10 flex-shrink-0">
-                    {b.date ? (
-                      <>
-                        <span className="text-[11px] font-bold text-[#2D5A3D]">
-                          {format(parseISO(b.date), 'MMM', { locale: id }).toUpperCase()}
+          {(() => {
+            type TimelineItem =
+              | { kind: 'booking'; sortKey: string; booking: BookingWithRelations }
+              | { kind: 'package'; sortKey: string; pkg: CustomerPackage }
+
+            const bookingItems: TimelineItem[] = bookings.map(b => ({
+              kind: 'booking',
+              sortKey: b.date ? `${b.date}T${b.time ?? '00:00:00'}` : '9999-12-31T99:99:99',
+              booking: b,
+            }))
+            const packageItems: TimelineItem[] = customerPackages.map(cp => ({
+              kind: 'package',
+              sortKey: cp.purchased_at,
+              pkg: cp,
+            }))
+            const timeline = [...bookingItems, ...packageItems].sort((a, b) => b.sortKey.localeCompare(a.sortKey))
+
+            if (timeline.length === 0) {
+              return <p className="text-sm text-gray-400 text-center py-8">Belum ada kunjungan</p>
+            }
+
+            return (
+              <div className="space-y-2">
+                {timeline.map(item => {
+                  if (item.kind === 'booking') {
+                    const b = item.booking
+                    return (
+                      <button
+                        key={`b-${b.id}`}
+                        onClick={() => router.push(`/bookings/${b.id}`)}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 active:bg-gray-50 text-left"
+                      >
+                        <div className="flex flex-col items-center w-10 flex-shrink-0">
+                          {b.date ? (
+                            <>
+                              <span className="text-[11px] font-bold text-[#2D5A3D]">
+                                {format(parseISO(b.date), 'MMM', { locale: id }).toUpperCase()}
+                              </span>
+                              <span className="text-lg font-bold text-gray-900 leading-none">
+                                {format(parseISO(b.date), 'd')}
+                              </span>
+                              <span className="text-[10px] text-gray-400">
+                                {format(parseISO(b.date), 'yyyy')}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-[10px] font-semibold text-orange-400 text-center leading-tight">TBD</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{b.service?.name ?? 'Layanan dihapus'}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {b.time?.slice(0, 5) ?? 'Jadwal TBD'}
+                            {b.custom_price != null ? ` · ${formatPrice(b.custom_price)}` : b.service?.price ? ` · ${formatPrice(b.service.price)}` : ''}
+                          </p>
+                        </div>
+                        <span
+                          className="text-[10px] font-medium px-2 py-1 rounded-full flex-shrink-0"
+                          style={{
+                            background: b.status === 'confirmed' ? '#E8F0EA' : b.status === 'completed' ? '#f0fdf4' : '#fef2f2',
+                            color: b.status === 'confirmed' ? '#2D5A3D' : b.status === 'completed' ? '#16a34a' : '#dc2626',
+                          }}
+                        >
+                          {b.status === 'confirmed' ? 'Konfirmasi' : b.status === 'completed' ? 'Selesai' : 'Batal'}
+                        </span>
+                      </button>
+                    )
+                  }
+
+                  const cp = item.pkg
+                  const purchaseDate = cp.purchased_at.slice(0, 10)
+                  const badge = cp.status === 'cancelled'
+                    ? { bg: '#fee2e2', text: '#dc2626', label: 'Dibatalkan' }
+                    : cp.status === 'expired'
+                      ? { bg: '#fef3c7', text: '#d97706', label: 'Kadaluarsa' }
+                      : { bg: '#f3e8ff', text: '#7c3aed', label: 'Paket' }
+                  return (
+                    <div
+                      key={`p-${cp.id}`}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-purple-100 text-left"
+                    >
+                      <div className="flex flex-col items-center w-10 flex-shrink-0">
+                        <span className="text-[11px] font-bold text-purple-500">
+                          {format(parseISO(purchaseDate), 'MMM', { locale: id }).toUpperCase()}
                         </span>
                         <span className="text-lg font-bold text-gray-900 leading-none">
-                          {format(parseISO(b.date), 'd')}
+                          {format(parseISO(purchaseDate), 'd')}
                         </span>
                         <span className="text-[10px] text-gray-400">
-                          {format(parseISO(b.date), 'yyyy')}
+                          {format(parseISO(purchaseDate), 'yyyy')}
                         </span>
-                      </>
-                    ) : (
-                      <span className="text-[10px] font-semibold text-orange-400 text-center leading-tight">TBD</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{b.service?.name ?? 'Layanan dihapus'}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {b.time?.slice(0, 5) ?? 'Jadwal TBD'}
-                      {b.custom_price != null ? ` · ${formatPrice(b.custom_price)}` : b.service?.price ? ` · ${formatPrice(b.service.price)}` : ''}
-                    </p>
-                  </div>
-                  <span
-                    className="text-[10px] font-medium px-2 py-1 rounded-full flex-shrink-0"
-                    style={{
-                      background: b.status === 'confirmed' ? '#E8F0EA' : b.status === 'completed' ? '#f0fdf4' : '#fef2f2',
-                      color: b.status === 'confirmed' ? '#2D5A3D' : b.status === 'completed' ? '#16a34a' : '#dc2626',
-                    }}
-                  >
-                    {b.status === 'confirmed' ? 'Konfirmasi' : b.status === 'completed' ? 'Selesai' : 'Batal'}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">Beli Paket: {cp.package_name}</p>
+                        <p className={`text-xs mt-0.5 ${cp.status === 'cancelled' ? 'line-through text-gray-400' : 'text-gray-500'}`}>
+                          {formatPrice(cp.paid_price)}
+                        </p>
+                      </div>
+                      <span
+                        className="text-[10px] font-medium px-2 py-1 rounded-full flex-shrink-0"
+                        style={{ background: badge.bg, color: badge.text }}
+                      >
+                        {badge.label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
         </div>
       </div>
 
