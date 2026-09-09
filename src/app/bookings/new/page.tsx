@@ -85,7 +85,7 @@ function NewBookingForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [savedBooking, setSavedBooking] = useState<{
-    id: string; customerName: string; customerPhone: string
+    id: string | null; customerName: string; customerPhone: string
     serviceNames: string[]; totalPrice: number; date: string | null; time: string | null
     linkedPackageName: string | null
   } | null>(null)
@@ -241,9 +241,30 @@ function NewBookingForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!customerId) { setError('Pilih pelanggan terlebih dahulu'); return }
-    if (serviceIds.length === 0) { setError('Pilih minimal satu layanan'); return }
+    if (serviceIds.length === 0 && !newlyBoughtPackageId) {
+      setError('Pilih minimal satu layanan, atau beli paket terlebih dahulu')
+      return
+    }
     setLoading(true)
     setError('')
+
+    // Package-only order: the purchase already saved the moment it was
+    // bought above — there's no visit to schedule, so just confirm it.
+    if (serviceIds.length === 0 && newlyBoughtPackageId) {
+      const pkg = customerPackages.find(cp => cp.id === newlyBoughtPackageId)
+      setSavedBooking({
+        id: null,
+        customerName,
+        customerPhone: '',
+        serviceNames: [],
+        totalPrice: pkg?.paid_price ?? 0,
+        date: null,
+        time: null,
+        linkedPackageName: pkg?.package_name ?? null,
+      })
+      setLoading(false)
+      return
+    }
 
     const res = await fetch('/api/bookings', {
       method: 'POST',
@@ -283,9 +304,9 @@ function NewBookingForm() {
   }
 
   if (savedBooking) {
+    const isPackageOnly = !savedBooking.id
     const waPhone = savedBooking.customerPhone.replace(/^0/, '62').replace(/[^0-9]/g, '')
     const dateFormatted = savedBooking.date ? format(parseISO(savedBooking.date), 'EEEE, d MMMM yyyy', { locale: id }) : null
-    const svcLine = savedBooking.serviceNames.map(n => `• ${n}`).join('\n')
     const waMsg = encodeURIComponent(
       `Halo ${savedBooking.customerName},\n\n` +
       `Berikut konfirmasi janji Anda di Loome Hair Removal:\n\n` +
@@ -299,7 +320,7 @@ function NewBookingForm() {
     return (
       <div className="flex flex-col h-screen bg-white">
         <header className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-gray-100">
-          <h1 className="text-lg font-bold text-gray-900">Janji Tersimpan!</h1>
+          <h1 className="text-lg font-bold text-gray-900">{isPackageOnly ? 'Paket Terjual!' : 'Janji Tersimpan!'}</h1>
         </header>
         <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
           <div className="w-20 h-20 rounded-full bg-[#E8F0EA] flex items-center justify-center">
@@ -310,28 +331,38 @@ function NewBookingForm() {
           <div className="text-center">
             <p className="text-xl font-bold text-gray-900">{savedBooking.customerName}</p>
             <p className="text-sm text-gray-500 mt-1">
-              {savedBooking.serviceNames.join(', ')}
-              {savedBooking.linkedPackageName ? ` + Beli Paket: ${savedBooking.linkedPackageName}` : ''}
+              {isPackageOnly ? `Beli Paket: ${savedBooking.linkedPackageName}` : savedBooking.serviceNames.join(', ')}
+              {!isPackageOnly && savedBooking.linkedPackageName ? ` + Beli Paket: ${savedBooking.linkedPackageName}` : ''}
             </p>
             <p className="text-sm font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(savedBooking.totalPrice)}</p>
-            {dateFormatted && savedBooking.time
-              ? <p className="text-sm text-[#2D5A3D] mt-0.5">{dateFormatted} · {savedBooking.time.slice(0, 5)}</p>
-              : <p className="text-sm text-orange-500 mt-0.5">Jadwal belum ditetapkan</p>
-            }
+            {!isPackageOnly && (
+              dateFormatted && savedBooking.time
+                ? <p className="text-sm text-[#2D5A3D] mt-0.5">{dateFormatted} · {savedBooking.time.slice(0, 5)}</p>
+                : <p className="text-sm text-orange-500 mt-0.5">Jadwal belum ditetapkan</p>
+            )}
           </div>
           <div className="w-full space-y-3">
-            <a
-              href={`https://wa.me/${waPhone}?text=${waMsg}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#25D366] text-white font-semibold text-base active:opacity-80"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-              </svg>
-              Kirim Konfirmasi WhatsApp
-            </a>
-            {savedBooking.date ? (
+            {!isPackageOnly && (
+              <a
+                href={`https://wa.me/${waPhone}?text=${waMsg}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#25D366] text-white font-semibold text-base active:opacity-80"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                </svg>
+                Kirim Konfirmasi WhatsApp
+              </a>
+            )}
+            {isPackageOnly ? (
+              <button
+                onClick={() => router.push(`/customers/${customerId}`)}
+                className="w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base active:opacity-80"
+              >
+                Lihat Profil Pelanggan
+              </button>
+            ) : savedBooking.date ? (
               <button
                 onClick={() => router.push(`/calendar?date=${savedBooking.date}`)}
                 className="w-full py-3.5 rounded-xl border border-gray-200 text-gray-700 font-semibold text-base active:bg-gray-50"
@@ -681,7 +712,8 @@ function NewBookingForm() {
             </div>
           )}
 
-          {/* Date & Time */}
+          {/* Date & Time — only relevant when there's a visit to schedule */}
+          {serviceIds.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-sm font-medium text-gray-700">Tanggal &amp; Waktu</label>
@@ -731,8 +763,10 @@ function NewBookingForm() {
             </div>
             )}
           </div>
+          )}
 
-          {/* Notes */}
+          {/* Notes — tied to the visit, so only relevant when there's a service booked */}
+          {serviceIds.length > 0 && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Catatan (opsional)</label>
             <textarea
@@ -743,9 +777,10 @@ function NewBookingForm() {
               placeholder="Catatan tambahan..."
             />
           </div>
+          )}
 
           {/* Summary */}
-          {customerId && serviceIds.length > 0 && (
+          {customerId && (serviceIds.length > 0 || linkedPkgForSummary) && (
             <div className="p-4 rounded-2xl bg-[#E8F0EA]">
               <p className="text-xs font-semibold text-[#2D5A3D] uppercase tracking-wide mb-2">Ringkasan</p>
               <p className="text-sm font-semibold text-gray-900">{customerName}</p>
@@ -767,12 +802,17 @@ function NewBookingForm() {
                   <span>{formatPrice(grandTotal)}</span>
                 </div>
               )}
-              {scheduleNow ? (
-                <p className="text-sm text-gray-700 mt-1">
-                  {format(parseISO(date), 'EEEE, d MMMM yyyy', { locale: id })} · {time.slice(0, 5)}{endTime ? ` → ${endTime.slice(0, 5)}` : ''}
-                </p>
-              ) : (
-                <p className="text-sm text-orange-500 mt-1">Jadwal belum ditetapkan</p>
+              {serviceIds.length > 0 && (
+                scheduleNow ? (
+                  <p className="text-sm text-gray-700 mt-1">
+                    {format(parseISO(date), 'EEEE, d MMMM yyyy', { locale: id })} · {time.slice(0, 5)}{endTime ? ` → ${endTime.slice(0, 5)}` : ''}
+                  </p>
+                ) : (
+                  <p className="text-sm text-orange-500 mt-1">Jadwal belum ditetapkan</p>
+                )
+              )}
+              {serviceIds.length === 0 && (
+                <p className="text-sm text-gray-500 mt-1">Pembelian paket saja, tanpa janji kunjungan</p>
               )}
             </div>
           )}
@@ -781,10 +821,10 @@ function NewBookingForm() {
 
           <button
             type="submit"
-            disabled={loading || !customerId || serviceIds.length === 0}
+            disabled={loading || !customerId || (serviceIds.length === 0 && !newlyBoughtPackageId)}
             className="w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base disabled:opacity-40 active:opacity-80"
           >
-            {loading ? 'Menyimpan...' : 'Simpan Janji'}
+            {loading ? 'Menyimpan...' : serviceIds.length === 0 ? 'Selesaikan Pembelian Paket' : 'Simpan Janji'}
           </button>
 
           <div style={{ height: 24 }} />

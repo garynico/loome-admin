@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { format, parseISO } from 'date-fns'
 import { id } from 'date-fns/locale'
-import type { Customer, BookingWithRelations, CustomerPackage, Package } from '@/types'
+import type { Customer, BookingWithRelations, CustomerPackage } from '@/types'
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price)
@@ -37,12 +37,6 @@ export default function CustomerProfilePage() {
   const [notesSaving, setNotesSaving] = useState(false)
 
   const [customerPackages, setCustomerPackages] = useState<CustomerPackage[]>([])
-  const [showBuyPackage, setShowBuyPackage] = useState(false)
-  const [availablePackages, setAvailablePackages] = useState<Package[]>([])
-  const [buyPackageId, setBuyPackageId] = useState('')
-  const [buyPriceRaw, setBuyPriceRaw] = useState('')
-  const [buyNotes, setBuyNotes] = useState('')
-  const [buyingSaving, setBuyingSaving] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -61,39 +55,11 @@ export default function CustomerProfilePage() {
     load()
   }, [customerId])
 
-  async function openBuyPackage() {
-    const res = await fetch('/api/packages')
-    if (res.ok) setAvailablePackages(await res.json())
-    setBuyPackageId('')
-    setBuyPriceRaw('')
-    setBuyNotes('')
-    setShowBuyPackage(true)
-  }
-
-  function selectBuyPackage(pkg: Package) {
-    setBuyPackageId(pkg.id)
-    setBuyPriceRaw(String(pkg.price))
-  }
-
-  async function handleBuyPackage() {
-    if (!buyPackageId) return
-    setBuyingSaving(true)
-    const res = await fetch('/api/customer-packages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customer_id: customerId,
-        package_id: buyPackageId,
-        paid_price: Number(buyPriceRaw) || undefined,
-        notes: buyNotes || null,
-      }),
-    })
-    if (res.ok) {
-      const newPkg = await res.json()
-      setCustomerPackages(prev => [...prev, newPkg])
-      setShowBuyPackage(false)
-    }
-    setBuyingSaving(false)
+  function goToBuatJanji() {
+    if (!customer) return
+    const params = new URLSearchParams({ customer_id: customerId, customer_name: customer.name })
+    if (customer.gender) params.set('customer_gender', customer.gender)
+    router.push(`/bookings/new?${params.toString()}`)
   }
 
   const completedBookings = bookings.filter(b => b.status === 'completed')
@@ -355,7 +321,7 @@ export default function CustomerProfilePage() {
           <div className="px-4 py-4 border-b border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-700">Paket Aktif</h3>
-              <button onClick={openBuyPackage} className="text-xs text-[#2D5A3D] font-semibold active:opacity-70">+ Beli Paket</button>
+              <button onClick={goToBuatJanji} className="text-xs text-[#2D5A3D] font-semibold active:opacity-70">+ Beli Paket</button>
             </div>
             <div className="space-y-2">
               {customerPackages.filter(cp => cp.status === 'active').map(cp => {
@@ -393,7 +359,7 @@ export default function CustomerProfilePage() {
           <div className="px-4 pt-4 border-b border-gray-100 pb-4">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-sm font-semibold text-gray-700">Paket</h3>
-              <button onClick={openBuyPackage} className="text-xs text-[#2D5A3D] font-semibold active:opacity-70">+ Beli Paket</button>
+              <button onClick={goToBuatJanji} className="text-xs text-[#2D5A3D] font-semibold active:opacity-70">+ Beli Paket</button>
             </div>
             <p className="text-xs text-gray-400 py-2">Tidak ada paket aktif</p>
           </div>
@@ -515,91 +481,6 @@ export default function CustomerProfilePage() {
         </div>
       </div>
 
-      {/* Beli Paket bottom sheet */}
-      {showBuyPackage && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowBuyPackage(false)} />
-          <div className="relative bg-white rounded-t-3xl px-4 pt-5 pb-8 space-y-4 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-gray-900">Beli Paket</h2>
-              <button onClick={() => setShowBuyPackage(false)} className="p-1 text-gray-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-2">Pilih Paket</p>
-              <div className="space-y-2">
-                {availablePackages.map(pkg => {
-                  const selected = buyPackageId === pkg.id
-                  return (
-                    <button
-                      key={pkg.id}
-                      type="button"
-                      onClick={() => selectBuyPackage(pkg)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl border text-left"
-                      style={{ borderColor: selected ? '#2D5A3D' : '#e5e7eb', background: selected ? '#E8F0EA' : '#fff' }}
-                    >
-                      <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                        style={{ borderColor: selected ? '#2D5A3D' : '#d1d5db' }}>
-                        {selected && <div className="w-2.5 h-2.5 rounded-full bg-[#2D5A3D]" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900">{pkg.name}</p>
-                        <p className="text-xs text-gray-500">{pkg.service?.name ?? 'Umum'} · {pkg.sessions}x sesi</p>
-                      </div>
-                      <span className="text-sm font-semibold text-[#2D5A3D]">
-                        {formatPrice(pkg.price)}
-                      </span>
-                    </button>
-                  )
-                })}
-                {availablePackages.length === 0 && (
-                  <p className="text-sm text-gray-400 text-center py-4">Belum ada paket tersedia</p>
-                )}
-              </div>
-            </div>
-
-            {buyPackageId && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Harga Dibayar (IDR)</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">Rp</span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={buyPriceRaw ? new Intl.NumberFormat('id-ID').format(Number(buyPriceRaw)) : ''}
-                      onChange={e => setBuyPriceRaw(e.target.value.replace(/\D/g, ''))}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 text-base focus:outline-none focus:ring-2 focus:ring-[#2D5A3D]"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Catatan (opsional)</label>
-                  <input
-                    type="text"
-                    value={buyNotes}
-                    onChange={e => setBuyNotes(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D5A3D]"
-                    placeholder="Diskon, referral, dll..."
-                  />
-                </div>
-              </>
-            )}
-
-            <button
-              onClick={handleBuyPackage}
-              disabled={buyingSaving || !buyPackageId}
-              className="w-full py-3.5 rounded-xl bg-[#2D5A3D] text-white font-semibold text-base disabled:opacity-40 active:opacity-80"
-            >
-              {buyingSaving ? 'Menyimpan...' : 'Konfirmasi Pembelian'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Edit drawer */}
       {isEditing && (
