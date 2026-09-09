@@ -87,6 +87,7 @@ function NewBookingForm() {
   const [savedBooking, setSavedBooking] = useState<{
     id: string; customerName: string; customerPhone: string
     serviceNames: string[]; totalPrice: number; date: string | null; time: string | null
+    linkedPackageName: string | null
   } | null>(null)
 
   const selectedServices = services.filter(s => serviceIds.includes(s.id))
@@ -228,6 +229,15 @@ function NewBookingForm() {
   const finalPrice = priceEditing && Number(customPriceRaw) > 0 ? Number(customPriceRaw) : null
   const displayTotal = finalPrice ?? calculatedTotal
 
+  // A package bought in this session is a line item on the same order
+  // regardless of whether it's also used to cover today's service — either
+  // way the customer owes the package price, so it's surfaced in the
+  // summary below so the total reflects the whole order, not just the visit.
+  const linkedPkgForSummary = newlyBoughtPackageId
+    ? customerPackages.find(cp => cp.id === newlyBoughtPackageId) ?? null
+    : null
+  const grandTotal = displayTotal + (linkedPkgForSummary?.paid_price ?? 0)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!customerId) { setError('Pilih pelanggan terlebih dahulu'); return }
@@ -248,7 +258,7 @@ function NewBookingForm() {
         custom_price: displayTotal,
         dp_amount: hasDp && Number(dpRaw) > 0 ? Number(dpRaw) : 0,
         customer_package_id: usePackageId ?? null,
-        linked_package_id: newlyBoughtPackageId && newlyBoughtPackageId !== usePackageId ? newlyBoughtPackageId : null,
+        linked_package_id: newlyBoughtPackageId ?? null,
       }),
     })
 
@@ -259,9 +269,11 @@ function NewBookingForm() {
         customerName: booking.customer?.name ?? customerName,
         customerPhone: booking.customer?.phone ?? '',
         serviceNames: (booking.services as Service[])?.map((s: Service) => s.name) ?? selectedServices.map(s => s.name),
-        totalPrice: booking.custom_price ?? (booking.services as Service[])?.reduce((s: number, x: Service) => s + x.price, 0) ?? calculatedTotal,
+        totalPrice: (booking.custom_price ?? (booking.services as Service[])?.reduce((s: number, x: Service) => s + x.price, 0) ?? calculatedTotal)
+          + (booking.linked_package?.paid_price ?? 0),
         date: booking.date,
         time: booking.time,
+        linkedPackageName: booking.linked_package?.package_name ?? null,
       })
     } else {
       const data = await res.json()
@@ -297,7 +309,10 @@ function NewBookingForm() {
           </div>
           <div className="text-center">
             <p className="text-xl font-bold text-gray-900">{savedBooking.customerName}</p>
-            <p className="text-sm text-gray-500 mt-1">{savedBooking.serviceNames.join(', ')}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {savedBooking.serviceNames.join(', ')}
+              {savedBooking.linkedPackageName ? ` + Beli Paket: ${savedBooking.linkedPackageName}` : ''}
+            </p>
             <p className="text-sm font-semibold text-[#2D5A3D] mt-0.5">{formatPrice(savedBooking.totalPrice)}</p>
             {dateFormatted && savedBooking.time
               ? <p className="text-sm text-[#2D5A3D] mt-0.5">{dateFormatted} · {savedBooking.time.slice(0, 5)}</p>
@@ -740,16 +755,16 @@ function NewBookingForm() {
                   <span>{formatPrice(s.price)}</span>
                 </div>
               ))}
-              {priceEditing && displayTotal !== calculatedTotal && (
-                <div className="flex justify-between text-sm font-semibold text-[#2D5A3D] mt-1 pt-1 border-t border-[#2D5A3D]/20">
-                  <span>Total (diedit)</span>
-                  <span>{formatPrice(displayTotal)}</span>
+              {linkedPkgForSummary && (
+                <div className="flex justify-between text-sm text-gray-700 mt-0.5">
+                  <span>Beli Paket: {linkedPkgForSummary.package_name}</span>
+                  <span>{formatPrice(linkedPkgForSummary.paid_price)}</span>
                 </div>
               )}
-              {(!priceEditing || displayTotal === calculatedTotal) && selectedServices.length > 1 && (
+              {(linkedPkgForSummary || (priceEditing && displayTotal !== calculatedTotal) || selectedServices.length > 1) && (
                 <div className="flex justify-between text-sm font-semibold text-[#2D5A3D] mt-1 pt-1 border-t border-[#2D5A3D]/20">
-                  <span>Total</span>
-                  <span>{formatPrice(calculatedTotal)}</span>
+                  <span>{linkedPkgForSummary ? 'Total Pesanan' : priceEditing && displayTotal !== calculatedTotal ? 'Total (diedit)' : 'Total'}</span>
+                  <span>{formatPrice(grandTotal)}</span>
                 </div>
               )}
               {scheduleNow ? (
